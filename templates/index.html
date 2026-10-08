@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Codebook Builder</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=36">
+  <!-- CodeMirror: replaces the plain textarea in the editor with a real syntax-highlighted code editor (P1.2) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  <!-- Prism: syntax-highlights code cards in the live preview, using the same
+       muted palette pdf_builder.py uses for the printed PDF (P1.2) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-kotlin.min.js"></script>
+  <!-- SortableJS: drag-and-drop reordering of topics/templates (P1.3) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+</head>
+<body>
+
+<div class="app">
+
+  <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" aria-label="Toggle sidebar" aria-expanded="false">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 6.2c4.1-.1 12.5.3 16.2 0M4.2 12c5 0 10.5-.3 15.5 0M3.5 17.8c6 .2 11.5-.1 16.5 0"/></svg>
+  </button>
+  
+  <button class="rail-toggle-btn" id="rail-toggle-btn" aria-label="Toggle minimap" title="Toggle Minimap">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+  </button>
+
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h1>
+        <svg class="wordmark-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+        Codebook Builder
+      </h1>
+      <p class="hint">Edit on the left, see the real page on the right.</p>
+    </div>
+
+    <details class="sidebar-accordion" open>
+      <summary class="sidebar-accordion-header">
+        <div class="sidebar-section-label">Book Settings</div>
+        <svg class="accordion-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 9.5c2 2 4.5 5 6.5 5.5 2-.5 4.5-3.5 6.5-5.5"/></svg>
+      </summary>
+      <div class="sidebar-accordion-content">
+        <label>Book title
+          <input type="text" id="book-title" placeholder="e.g. Contest Codebook">
+        </label>
+        <label>Institution name
+          <input type="text" id="institution-name" placeholder="e.g. Mymensingh Engineering College">
+        </label>
+        <label>Team name
+          <input type="text" id="team-name" placeholder="e.g. MEC_ALGO_SCHOLARS">
+        </label>
+        <div class="row">
+          <label>Code font
+            <select id="code-font">
+              <option value="JetBrains Mono">JetBrains Mono</option>
+              <option value="IBM Plex Mono">IBM Plex Mono</option>
+              <option value="Space Mono">Space Mono</option>
+            </select>
+          </label>
+          <label>Code theme
+            <select id="code-theme">
+              <option value="cream">Cream (Default)</option>
+              <option value="sand-light">Sand Light</option>
+              <option value="github-light">GitHub Light</option>
+              <option value="solarized-light">Solarized Light</option>
+              <option value="one-light">One Light</option>
+              <option value="parchment">Parchment</option>
+            </select>
+          </label>
+          <label>Page size
+            <select id="page-size">
+              <option value="A4">A4</option>
+              <option value="Letter">Letter</option>
+            </select>
+          </label>
+        </div>
+        <div class="row">
+          <label>Cover style
+            <select id="cover-style">
+              <option value="minimal">Minimal</option>
+              <option value="sketch">Sketch</option>
+              <option value="banner">Banner</option>
+              <option value="frame">Frame</option>
+              <option value="terminal">Terminal</option>
+              <option value="geometric">Geometric</option>
+            </select>
+          </label>
+          <label>Accent color
+            <input type="color" id="accent-color" value="#2C2C2A" style="opacity:0; position:absolute; pointer-events:none;">
+            <div class="sketch-palette" data-target="accent-color"></div>
+          </label>
+        </div>
+        <label class="checkbox" style="margin-top: 4px;">
+          <input type="checkbox" id="show-team-footer" checked>
+          Show institution &amp; team name on every page
+        </label>
+      </div>
+    </details>
+
+    <details class="sidebar-accordion">
+      <summary class="sidebar-accordion-header">
+        <div class="sidebar-section-label">Template Page</div>
+        <svg class="accordion-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 9.5c2 2 4.5 5 6.5 5.5 2-.5 4.5-3.5 6.5-5.5"/></svg>
+      </summary>
+      <div class="sidebar-accordion-content boilerplate-settings">
+        <label class="checkbox">
+          <input type="checkbox" id="show-boilerplate" checked>
+          Include a pinned template page (right after the cover)
+        </label>
+        <div class="boilerplate-inner" id="boilerplate-inner">
+          <label>Template accent color
+            <input type="color" id="template-accent-color" value="#5B4A8A" style="opacity:0; position:absolute; pointer-events:none;">
+            <div class="sketch-palette" data-target="template-accent-color"></div>
+          </label>
+          <label>C++ Setup Template (Macro/Pragma/Includes)
+            <textarea id="boilerplate-code" placeholder="#include <iostream>..."></textarea>
+          </label>
+        </div>
+      </div>
+    </details>
+
+    <div class="sidebar-section" style="border-bottom:none; padding-bottom:8px;">
+      <div class="sidebar-section-label">Topics</div>
+      <div class="topics-list" id="topics-list">
+        <!-- filled by JS -->
+      </div>
+
+      <button class="btn btn-block" id="add-topic-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5c-.1 4.5.2 10.5 0 15M4.5 12c4.5.1 10.5-.2 15 0"/></svg>
+        Add topic
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <label class="checkbox">
+        <input type="checkbox" id="exclude-unverified">
+        Leave out unverified templates
+      </label>
+      <button class="btn btn-primary btn-block" id="build-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5c.5 4 3 6.5 7.5 7.5-4 .5-6.5 3-7.5 7.5-.5-4-3-6.5-7.5-7.5 4-.5 6.5-3 7.5-7.5z"/></svg>
+        Build PDF
+      </button>
+      <a class="btn btn-block" id="download-link" href="/download">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-.2 4 .1 9 0 12.5M12 15.5c-1-1.5-2.5-3-4-4M12 15.5c1-1.5 2.5-3 4-4M4 17.5c0 1 1 2 2 2h12c1 0 2-1 2-2"/></svg>
+        Download PDF
+      </a>
+      <button type="button" class="btn btn-block btn-ghost" id="trash-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5h19M8 6V4.5c0-.5.5-1 1-1h6c.5 0 1 .5 1 1V6M19.5 6.5l-.5 13.5c0 1-1 1.5-2 1.5H7c-1 0-2-.5-2-1.5L4.5 6.5"/></svg>
+        Recently deleted
+      </button>
+      <p class="status" id="status-msg" role="status" aria-live="polite"></p>
+    </div>
+  </aside>
+
+  <!-- CENTER PREVIEW -->
+  <main class="preview-area" id="preview-area">
+    <div class="preview-scroll" id="preview-scroll">
+      <!-- A4 pages filled by JS -->
+    </div>
+  </main>
+
+  <!-- THUMBNAILS RAIL (Minimap) -->
+  <aside class="thumbnails-rail" id="thumbnails-rail">
+    <!-- Thumbnail items generated by JS -->
+  </aside>
+
+</div>
+
+<!-- MODAL: add/edit template -->
+<div class="modal-backdrop" id="snippet-modal-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="snippet-modal-title">
+    <h2 id="snippet-modal-title">Add card</h2>
+    <form id="snippet-form">
+      <input type="hidden" id="snippet-id">
+
+      <label>Card type
+        <select id="snippet-kind">
+          <option value="code">Code template</option>
+          <option value="note">Note</option>
+          <option value="formula">Formula sheet</option>
+        </select>
+      </label>
+
+      <label>Title
+        <input type="text" id="snippet-title" required placeholder="e.g. Segment tree">
+      </label>
+
+      <label>Short description
+        <input type="text" id="snippet-subtitle" placeholder="e.g. Range sum, point update">
+      </label>
+
+      <div class="row" data-show-for="code">
+        <label>Topic
+          <select id="snippet-topic"></select>
+        </label>
+        <label>Time complexity
+          <input type="text" id="snippet-complexity" placeholder="O(log n)">
+        </label>
+        <label>Language
+          <select id="snippet-language">
+            <option value="cpp">C++</option>
+            <option value="java">Java</option>
+            <option value="python">Python</option>
+            <option value="kotlin">Kotlin</option>
+          </select>
+        </label>
+      </div>
+      <!-- Topic still needs to be selectable for note/formula cards -- code's
+           row above is hidden for those kinds, so a standalone copy lives here. -->
+      <label data-show-for="note,formula">Topic
+        <select id="snippet-topic-alt"></select>
+      </label>
+
+      <label data-show-for="note" id="snippet-notes-label">Notes / explanation
+        <textarea id="snippet-notes" rows="3" class="notes-textarea" placeholder="Plain-text explanation shown above the code (not monospaced)"></textarea>
+      </label>
+
+      <div class="formulas-field" data-show-for="formula">
+        <div class="formulas-field-head">
+          <span class="formulas-field-label">Math formulas</span>
+          <button type="button" class="btn btn-small" id="add-formula-btn">+ Add formula</button>
+        </div>
+        <p class="hint formulas-hint">{% raw %}Type LaTeX (e.g. <code>\frac{n(n+1)}{2}</code> or <code>\sum_{i=1}^{n} a_i</code>) — it's typeset into a real equation, not printed as plain text.{% endraw %}</p>
+        <div id="snippet-formulas-list"></div>
+      </div>
+
+      <label data-show-for="code">Code
+        <textarea id="snippet-code" rows="14" placeholder="Paste your code here"></textarea>
+      </label>
+      <div id="similarity-warning" class="similarity-warning" style="display:none;" role="status"></div>
+
+      <div class="row" data-show-for="code">
+        <label>Tested on (optional)
+          <input type="text" id="snippet-tested-on" placeholder="Codeforces 1234A">
+        </label>
+        <label class="checkbox align-bottom">
+          <input type="checkbox" id="snippet-verified">
+          I've verified this works
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn" id="snippet-delete-btn" style="display:none;">Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="snippet-cancel-btn">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: add topic -->
+<div class="modal-backdrop" id="topic-modal-backdrop">
+  <div class="modal modal-small" role="dialog" aria-modal="true" aria-labelledby="topic-modal-title">
+    <h2 id="topic-modal-title">Add topic</h2>
+    <form id="topic-form">
+      <label>Topic name
+        <input type="text" id="topic-name" required placeholder="e.g. Geometry">
+      </label>
+      <label>Color
+        <input type="color" id="topic-color" value="#378ADD" style="opacity:0; position:absolute; pointer-events:none;">
+        <div class="sketch-palette" data-target="topic-color"></div>
+      </label>
+      <div class="modal-actions">
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="topic-cancel-btn">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: recently deleted (soft-delete recovery, P1.5) -->
+<div class="modal-backdrop" id="trash-modal-backdrop">
+  <div class="modal" role="dialog" aria-labelledby="trash-modal-title">
+    <h2 id="trash-modal-title">Recently deleted</h2>
+    <p class="hint">Kept for 30 days, then removed for good.</p>
+    <div id="trash-list" class="trash-list"></div>
+    <div class="modal-actions">
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="trash-close-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: confirm (replaces native browser confirm() dialogs) -->
+<div class="modal-backdrop" id="confirm-modal-backdrop">
+  <div class="modal modal-small" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+    <h2 id="confirm-modal-title">Are you sure?</h2>
+    <p class="confirm-modal-message" id="confirm-modal-message"></p>
+    <div class="modal-actions">
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="confirm-modal-cancel-btn">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirm-modal-confirm-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Floating popover for editing an existing topic's color -->
+<div class="color-popover" id="color-popover">
+  <input type="color" id="color-popover-swatch" style="opacity:0; position:absolute; pointer-events:none;">
+  <span style="font-size:10.5px; font-family:'Kalam',cursive; color:var(--ink-soft); letter-spacing:0.2px;">Pick a colour</span>
+  <div class="sketch-palette" data-target="color-popover-swatch"></div>
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}?v=18"></script>
+</body>
+</html>

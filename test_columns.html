@@ -1,0 +1,13 @@
+<!DOCTYPE html><html><body>
+    <style>
+      .container {
+        height: 300px; background: #eee;
+        column-width: 190px; column-gap: 20px; column-fill: auto;
+      }
+      .card { break-inside: avoid; background: white; margin-bottom: 10px; border: 2px solid black; padding: 10px; }
+    </style>
+    <div class='container' id='cont' style='width: 820px;'>
+      <div class='card' style='height: 180px;'>Card 1 (180px)</div>
+      <div class='card' style='height: 180px;'>Card 2 (180px) - Should move to next col</div>
+    </div>
+    </body></html>
