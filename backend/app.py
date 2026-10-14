@@ -52,6 +52,9 @@ app = Flask(
     static_folder=str(FRONTEND_DIR / "static"),
     static_url_path="/static",
 )
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
 app.secret_key = os.environ.get("SECRET_KEY", "codebook-studio-secret-987123456")
 init_db()
 
@@ -231,7 +234,8 @@ def api_auth_providers():
 
 
 def _get_redirect_uri(endpoint: str) -> str:
-    app_url = os.environ.get("APP_URL", "").strip().rstrip("/")
+    app_url = os.environ.get("APP_URL") or os.environ.get("RENDER_EXTERNAL_URL", "")
+    app_url = app_url.strip().rstrip("/")
     if app_url:
         return f"{app_url}{endpoint}"
     host = request.host
