@@ -11,23 +11,23 @@ from pygments import highlight as pygments_highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
-from weasyprint import HTML
 try:
-    from weasyprint.text.fonts import FontConfiguration
-except ImportError:
-    from weasyprint.fonts import FontConfiguration
+    from weasyprint import HTML
+    try:
+        from weasyprint.text.fonts import FontConfiguration
+    except ImportError:
+        from weasyprint.fonts import FontConfiguration
+    _FONT_CONFIG = FontConfiguration()
+    HAS_WEASYPRINT = True
+except Exception:
+    HTML = None
+    _FONT_CONFIG = None
+    HAS_WEASYPRINT = False
+
 try:
     from backend.db import get_db
 except ImportError:
     from db import get_db
-
-# Reused across every build instead of created fresh each time -- WeasyPrint
-# has to parse and register all the embedded @font-face fonts (JetBrains
-# Mono, etc.) before it can lay out a single page, and that work is
-# identical every build. Keeping one FontConfiguration alive for the life
-# of the process means only the FIRST build after the server starts pays
-# that cost; every build after that skips straight to page layout.
-_FONT_CONFIG = FontConfiguration()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = BASE_DIR / "output"
@@ -1378,6 +1378,8 @@ def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = N
 <body>{cover_html}{boilerplate_html}{index_html}{''.join(sections_html)}</body></html>"""
 
     OUTPUT_DIR.mkdir(exist_ok=True)
-    pdf_path = output_path if output_path is not None else (OUTPUT_DIR / "codebook.pdf")
-    HTML(string=html_str, base_url=str(BASE_DIR / "frontend")).write_pdf(str(pdf_path), font_config=_FONT_CONFIG)
+    if HAS_WEASYPRINT and HTML:
+        HTML(string=html_str, base_url=str(BASE_DIR / "frontend")).write_pdf(str(pdf_path), font_config=_FONT_CONFIG)
+    else:
+        build_pdf_from_html(html_str, output_path=pdf_path)
     return pdf_path
