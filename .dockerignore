@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.git/
+.gitignore
+.env
+output/*.pdf
+debug_layout.log
+.DS_Store

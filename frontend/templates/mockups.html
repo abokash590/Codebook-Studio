@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snippet & Template Card Design Mockups — Codebook Studio</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+  <style>
+    :root {
+      --bg: #F4F4F6;
+      --card-bg: #FFFFFF;
+      --text-main: #18181B;
+      --text-muted: #71717A;
+      --accent-blue: #0071E3;
+      --accent-purple: #7C3AED;
+      --accent-emerald: #059669;
+      --code-font: 'JetBrains Mono', 'Fira Code', monospace;
+      --ui-font: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      font-family: var(--ui-font);
+      color: var(--text-main);
+      padding: 32px 24px 80px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    /* Top Showcase Bar */
+    .showcase-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .showcase-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: #000000;
+      color: #FFFFFF;
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .showcase-title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .showcase-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      max-width: 640px;
+      margin: 0 auto 20px;
+    }
+
+    /* View Switcher Bar */
+    .view-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 36px;
+    }
+    .mode-pills {
+      display: inline-flex;
+      background: #E4E4E7;
+      padding: 3px;
+      border-radius: 999px;
+    }
+    .mode-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #52525B;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      font-family: inherit;
+    }
+    .mode-btn.active {
+      background: #000000;
+      color: #FFFFFF;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #0071E3;
+      text-decoration: none;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: #FFFFFF;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+
+    /* Grid layout for 3 styles */
+    .mockups-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    @media (max-width: 1100px) {
+      .mockups-grid { grid-template-columns: 1fr; max-width: 680px; margin: 0 auto; }
+    }
+
+    .column-header {
+      background: #FFFFFF;
+      padding: 18px 20px;
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,0.07);
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .col-tag {
+      display: inline-block;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 8px;
+      border-radius: 5px;
+      margin-bottom: 6px;
+    }
+    .col-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .col-summary {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Simulated Paper Column Sheet */
+    .paper-sheet {
+      background: #FFFFFF;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 24px -6px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .sheet-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #A1A1AA;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .sheet-section-title::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: rgba(0,0,0,0.06);
+    }
+
+    /* ==============================================================
+       STYLE A: APPLE / CRAFT MINIMALIST
+       ============================================================== */
+    .col-tag-a { background: #E0F2FE; color: #0284C7; }
+
+    .card-a {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .card-a::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      width: 3.5px;
+      background: var(--accent-blue);
+    }
+    .card-a-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .card-a-title-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .card-a-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+    }
+    .card-a-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #0F172A;
+      letter-spacing: -0.01em;
+    }
+    .card-a-complexity {
+      font-family: var(--code-font);
+      font-size: 10px;
+      font-weight: 600;
+      color: #475569;
+      background: #F1F5F9;
+      border: 1px solid #E2E8F0;
+      padding: 2px 7px;
+      border-radius: 999px;
+      letter-spacing: -0.01em;
+    }
+    .card-a-sub {
+      font-size: 11px;
+      color: #64748B;
+      margin-bottom: 8px;
+    }
+    .card-a-notes {
+      font-size: 11px;
+      line-height: 1.45;
+      color: #334155;
+      background: #F8FAFC;
+      border-left: 2px solid #CBD5E1;
+      padding: 5px 8px;
+      border-radius: 0 5px 5px 0;
+      margin-bottom: 8px;
+    }
+    .card-a-code {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 7px;
+      padding: 9px 11px;
+      font-family: var(--code-font);
+      font-size: 10px;
+      line-height: 1.44;
+      color: #1E293B;
+      white-space: pre-wrap;
+      word-break: normal;
+      overflow-wrap: normal;
+    }
+
+    /* Template Card A */
+    .template-card-a {
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      background: #FFFFFF;
+      overflow: hidden;
+    }
+    .template-card-a-header {
+      background: #F8FAFC;
+      border-bottom: 1px solid #E2E8F0;
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .tmpl-a-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #0F172A;
+    }
+    .tmpl-a-pill svg { color: var(--accent-blue); }
+    .tmpl-a-tag {
+      font-size: 9.5px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #E0F2FE;
+      color: #0284C7;
+      text-transform: uppercase;
+    }
+    .template-card-a-body {
+      padding: 10px 12px;
+      font-family: var(--code-font);
+      font-size: 9.5px;
+      line-height: 1.45;
+      background: #FFFFFF;
+      white-space: pre-wrap;
+    }
+
+    /* ==============================================================
+       STYLE B: DEVELOPER IDE / TERMINAL WINDOW
+       ============================================================== */
+    .col-tag-b { background: #EDE9FE; color: #7C3AED; }
+
+    .card-b {
+      background: #FFFFFF;
+      border: 1px solid #D4D4D8;
+      border-radius: 9px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .card-b-windowbar {
+      background: #F4F4F5;
+      border-bottom: 1px solid #E4E4E7;
+      padding: 5px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-b-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .card-b-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #D4D4D8;
+    }
+    .card-b-filetab {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--code-font);
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #27272A;
+      background: #FFFFFF;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid #E4E4E7;
+    }
+    .card-b-complexity {
+      font-family: var(--code-font);
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #FFFFFF;
+      background: #18181B;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .card-b-body {
+      padding: 10px 12px;
+    }
+    .card-b-title-line {
+      font-size: 13px;
+      font-weight: 700;
+      color: #18181B;
+      margin-bottom: 3px;
+    }
+    .card-b-sub {
+      font-size: 10.5px;
+      color: #71717A;
+      margin-bottom: 7px;
+    }
+    .card-b-notes {
+      font-size: 10.5px;
+      line-height: 1.42;
+      color: #3F3F46;
+      background: #FAFAFA;
+      border-left: 2px solid var(--accent-purple);
+      padding: 4px 8px;
+      margin-bottom: 8px;
+      border-radius: 0 4px 4px 0;
+    }
+    .card-b-code {
+      background: #FAF9F6;
+      border: 1px solid #E4E4E7;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-family: var(--code-font);
+      font-size: 10px;
+      line-height: 1.42;
+      color: #18181B;
+      white-space: pre-wrap;
+    }
+
+    /* Template Card B */
+    .template-card-b {
+      border: 1px solid #D4D4D8;
+      border-radius: 9px;
+      overflow: hidden;
+      background: #FFFFFF;
+    }
+    .template-card-b-windowbar {
+      background: #18181B;
+      color: #FFFFFF;
+      padding: 6px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .tmpl-b-title {
+      font-family: var(--code-font);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tmpl-b-status {
+      font-size: 9px;
+      color: #A1A1AA;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .template-card-b-body {
+      padding: 10px 12px;
+      font-family: var(--code-font);
+      font-size: 9.5px;
+      line-height: 1.45;
+      background: #FAF9F6;
+      white-space: pre-wrap;
+    }
+
+    /* ==============================================================
+       STYLE C: ACADEMIC / ICPC WORLD FINALS BOOKLET
+       ============================================================== */
+    .col-tag-c { background: #FEF3C7; color: #D97706; }
+
+    .card-c {
+      background: #FFFFFF;
+      border: 1px solid #1C1917;
+      border-radius: 4px;
+      padding: 9px 10px;
+    }
+    .card-c-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+    .card-c-category {
+      font-family: var(--ui-font);
+      font-size: 8.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #78716C;
+    }
+    .card-c-complexity {
+      font-family: var(--code-font);
+      font-size: 10px;
+      font-weight: 700;
+      color: #1C1917;
+    }
+    .card-c-title {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: #0C0A09;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #E7E5E4;
+      margin-bottom: 5px;
+    }
+    .card-c-notes {
+      font-size: 10px;
+      line-height: 1.38;
+      color: #44403C;
+      margin-bottom: 5px;
+    }
+    .card-c-code {
+      background: #F5F5F4;
+      border: 0.5px solid #D6D3D1;
+      border-radius: 3px;
+      padding: 6px 8px;
+      font-family: var(--code-font);
+      font-size: 9.5px;
+      line-height: 1.38;
+      color: #1C1917;
+      white-space: pre-wrap;
+    }
+
+    /* Template Card C */
+    .template-card-c {
+      border: 1.5px solid #1C1917;
+      border-radius: 4px;
+      padding: 10px;
+      background: #FFFFFF;
+    }
+    .template-card-c-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1.5px solid #1C1917;
+      padding-bottom: 4px;
+      margin-bottom: 8px;
+    }
+    .tmpl-c-title {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .tmpl-c-meta {
+      font-family: var(--code-font);
+      font-size: 9px;
+      color: #57534E;
+    }
+    .template-card-c-body {
+      font-family: var(--code-font);
+      font-size: 9.5px;
+      line-height: 1.38;
+      white-space: pre-wrap;
+      background: #F5F5F4;
+      padding: 8px;
+      border: 0.5px solid #D6D3D1;
+      border-radius: 3px;
+    }
+
+    /* Note Card A (Craft) */
+    .card-a-note {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .card-a-note::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      width: 3.5px;
+      background: var(--accent-blue);
+    }
+    .card-a-note-badge {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #0284C7;
+      background: #E0F2FE;
+      padding: 2px 7px;
+      border-radius: 999px;
+    }
+    .card-a-note-body {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 7px;
+      padding: 9px 12px;
+      font-size: 11px;
+      line-height: 1.55;
+      color: #334155;
+    }
+    .card-a-note-body p { margin-bottom: 6px; }
+    .card-a-note-body ul { padding-left: 16px; margin-bottom: 6px; }
+    .card-a-note-body li { margin-bottom: 3px; }
+    .card-a-note-body code {
+      font-family: var(--code-font);
+      font-size: 10px;
+      background: #E2E8F0;
+      padding: 1px 4px;
+      border-radius: 3px;
+      color: #0F172A;
+    }
+
+    /* Note Card B (IDE Window) */
+    .card-b-note {
+      background: #FFFFFF;
+      border: 1px solid #D4D4D8;
+      border-radius: 9px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .card-b-note-badge {
+      font-family: var(--code-font);
+      font-size: 9px;
+      font-weight: 700;
+      color: #FFFFFF;
+      background: #7C3AED;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .card-b-note-body {
+      background: #FAF9F6;
+      border: 1px solid #E4E4E7;
+      border-radius: 6px;
+      padding: 9px 11px;
+      font-size: 10.5px;
+      line-height: 1.5;
+      color: #27272A;
+      margin-top: 5px;
+    }
+    .card-b-note-body p { margin-bottom: 5px; }
+    .card-b-note-body ul { padding-left: 16px; margin-bottom: 5px; }
+    .card-b-note-body li { margin-bottom: 2px; }
+    .card-b-note-body code {
+      font-family: var(--code-font);
+      font-size: 9.5px;
+      background: #E4E4E7;
+      padding: 1px 4px;
+      border-radius: 3px;
+      color: #18181B;
+    }
+
+    /* Note Card C (Academic ICPC) */
+    .card-c-note {
+      background: #FFFFFF;
+      border: 1px solid #1C1917;
+      border-radius: 4px;
+      padding: 9px 10px;
+    }
+    .card-c-note-badge {
+      font-family: var(--code-font);
+      font-size: 9px;
+      font-weight: 800;
+      color: #1C1917;
+    }
+    .card-c-note-body {
+      background: #F5F5F4;
+      border: 0.5px solid #D6D3D1;
+      border-radius: 3px;
+      padding: 7px 9px;
+      font-size: 10px;
+      line-height: 1.42;
+      color: #1C1917;
+    }
+    .card-c-note-body p { margin-bottom: 4px; }
+    .card-c-note-body ul { padding-left: 14px; margin-bottom: 4px; }
+    .card-c-note-body li { margin-bottom: 2px; }
+    .card-c-note-body code {
+      font-family: var(--code-font);
+      font-size: 9px;
+      background: #E7E5E4;
+      padding: 1px 3px;
+      border-radius: 2px;
+      color: #0C0A09;
+    }
+
+    /* Syntax Highlighting overrides for clean contrast */
+    .token-kw { color: #0071E3; font-weight: 600; }
+    .token-type { color: #7C3AED; font-weight: 600; }
+    .token-fn { color: #D97706; font-weight: 600; }
+    .token-cmt { color: #94A3B8; font-style: italic; }
+    .token-num { color: #059669; }
+    .token-str { color: #EA580C; }
+
+    /* Key Advantages Checklist */
+    .pros-list {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .pro-item {
+      font-size: 11.5px;
+      color: #52525B;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+    .pro-item svg {
+      flex-shrink: 0;
+      margin-top: 2px;
+      color: #10B981;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="showcase-header">
+    <div class="showcase-badge">Interactive Visual Comparison</div>
+    <h1 class="showcase-title">Snippet &amp; Template Card Design Upgrade</h1>
+    <p class="showcase-desc">
+      Compare the 3 proposed visual directions side by side with real competitive programming C++ code and typography. Each style is fully compatible with both the on-screen preview and WeasyPrint PDF compilation.
+    </p>
+
+    <div class="view-controls">
+      <a href="/" class="back-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back to Codebook Studio
+      </a>
+    </div>
+  </div>
+
+  <div class="mockups-grid">
+
+    <!-- ==============================================================
+         COLUMN 1: OPTION A (APPLE / CRAFT MINIMALIST)
+         ============================================================== -->
+    <div class="mockup-column">
+      <div class="column-header">
+        <span class="col-tag col-tag-a">Option A</span>
+        <h2 class="col-title">Craft / Apple Minimalist</h2>
+        <p class="col-summary">
+          Clean, human, and balanced. Features a left topic accent border, pill complexity badge, subtle notes callout, and soft slate code canvas.
+        </p>
+      </div>
+
+      <div class="paper-sheet">
+        <div class="sheet-section-title">Snippet Card Example</div>
+
+        <!-- Card A Example -->
+        <div class="card-a">
+          <div class="card-a-head">
+            <div class="card-a-title-row">
+              <span class="card-a-dot"></span>
+              <span class="card-a-title">Dijkstra's Algorithm</span>
+            </div>
+            <span class="card-a-complexity">⏱ O((V + E) log V)</span>
+          </div>
+          <div class="card-a-notes">
+            <strong>Key Note:</strong> Push <code>{dist, u}</code> to min-heap. Skip visited nodes if <code>d &gt; dist[u]</code>.
+          </div>
+          <div class="card-a-code"><span class="token-kw">using</span> <span class="token-type">pli</span> = <span class="token-type">pair</span>&lt;<span class="token-type">long long</span>, <span class="token-type">int</span>&gt;;
+<span class="token-type">void</span> <span class="token-fn">dijkstra</span>(<span class="token-type">int</span> src, <span class="token-type">int</span> n) {
+    <span class="token-type">priority_queue</span>&lt;<span class="token-type">pli</span>, <span class="token-type">vector</span>&lt;<span class="token-type">pli</span>&gt;, <span class="token-type">greater</span>&lt;<span class="token-type">pli</span>&gt;&gt; pq;
+    dist.<span class="token-fn">assign</span>(n + <span class="token-num">1</span>, INF);
+    dist[src] = <span class="token-num">0</span>;
+    pq.<span class="token-fn">push</span>({<span class="token-num">0</span>, src});
+    <span class="token-kw">while</span> (!pq.<span class="token-fn">empty</span>()) {
+        <span class="token-kw">auto</span> [d, u] = pq.<span class="token-fn">top</span>(); pq.<span class="token-fn">pop</span>();
+        <span class="token-kw">if</span> (d &gt; dist[u]) <span class="token-kw">continue</span>;
+        <span class="token-kw">for</span> (<span class="token-kw">auto</span>&amp; [v, w] : adj[u]) {
+            <span class="token-kw">if</span> (dist[u] + w &lt; dist[v]) {
+                dist[v] = dist[u] + w;
+                pq.<span class="token-fn">push</span>({dist[v], v});
+            }
+        }
+    }
+        </div>
+
+        <div class="sheet-section-title">Note Card Example</div>
+
+        <!-- Note Card A Example -->
+        <div class="card-a-note">
+          <div class="card-a-head">
+            <div class="card-a-title-row">
+              <span class="card-a-dot"></span>
+              <span class="card-a-title">Coordinate Compression</span>
+            </div>
+            <span class="card-a-note-badge">📝 NOTE</span>
+          </div>
+          <div class="card-a-note-body">
+            <p><strong>Core Steps:</strong></p>
+            <ul>
+              <li>Collect coordinates: <code>vals.push_back(x);</code></li>
+              <li>Sort &amp; remove duplicates: <code>sort(all(v)); v.erase(unique(all(v)), v.end());</code></li>
+              <li>Query compressed rank: <code>lower_bound(all(v), x) - v.begin();</code></li>
+            </ul>
+            <p><strong>Edge Cases:</strong> For 1-based indexing, add <code>+ 1</code> to the rank. Retain the vector for inverse lookup <code>v[rank]</code>.</p>
+          </div>
+        </div>
+
+        <div class="sheet-section-title">Setup Template Example</div>
+
+        <!-- Template Card A Example -->
+        <div class="template-card-a">
+          <div class="template-card-a-header">
+            <div class="tmpl-a-pill">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              <span>Contest Setup Template</span>
+            </div>
+            <span class="tmpl-a-tag">C++20 Fast I/O</span>
+          </div>
+          <div class="template-card-a-body"><span class="token-kw">#include</span> <span class="token-str">&lt;bits/stdc++.h&gt;</span>
+<span class="token-kw">using</span> <span class="token-kw">namespace</span> std;
+
+<span class="token-kw">#define</span> fast_io ios::sync_with_stdio(<span class="token-num">0</span>); cin.tie(<span class="token-num">0</span>);
+<span class="token-kw">#define</span> all(x)  (x).begin(), (x).end()
+<span class="token-kw">#define</span> sz(x)   (int)(x).size()
+<span class="token-kw">using</span> ll = <span class="token-type">long long</span>;
+<span class="token-kw">const</span> ll INF = <span class="token-num">1e18</span>;
+
+<span class="token-type">int</span> <span class="token-fn">main</span>() {
+    fast_io;
+    <span class="token-type">int</span> tc = <span class="token-num">1</span>;
+    <span class="token-kw">while</span> (tc--) solve();
+}</div>
+        </div>
+
+        <div class="pros-list">
+          <div class="pro-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>সহজপাঠ্য, ফ্রেন্ডলি ও মার্জিত ভিজ্যুয়াল ব্যালেন্স</span>
+          </div>
+          <div class="pro-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>টপিক কালার অ্যাকসেন্টটি দারুণভাবে ফুটিয়ে তোলে</span>
+          </div>
+          <div class="pro-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>খুব কম কালির খরচ (প্রিন্টের জন্য আদর্শ)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==============================================================
+         COLUMN 2: OPTION B (DEVELOPER IDE / TERMINAL WINDOW)
+         ============================================================== -->
+    <div class="mockup-column">
+      <div class="column-header">
+        <span class="col-tag col-tag-b">Option B</span>
+        <h2 class="col-title">IDE / Terminal Window</h2>
+        <p class="col-summary">
+          Raycast / Code Editor ভাইব। উইন্ডো কন্ট্রোল ডটস, ফাইল নেম ট্যাব (<code>dijkstra.cpp</code>), ডার্ক কমপ্লেক্সিটি পিল এবং উইন্ডো ফ্রেম।
+        </p>
+      </div>
+
+      <div class="paper-sheet">
+        <div class="sheet-section-title">Snippet Card Example</div>
+
+        <!-- Card B Example -->
+        <div class="card-b">
+          <div class="card-b-windowbar">
+            <div class="card-b-controls">
+              <span class="card-b-dot" style="background:#EF4444;"></span>
+              <span class="card-b-dot" style="background:#F59E0B;"></span>
+              <span class="card-b-dot" style="background:#10B981;"></span>
+            </div>
+            <div class="card-b-filetab">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+              <span>dijkstra.cpp</span>
+            </div>
+            <span class="card-b-complexity">O((V+E)logV)</span>
+          </div>
+          <div class="card-b-body">
+            <div class="card-b-title-line">Dijkstra's Algorithm</div>
+            <div class="card-b-notes">
+              Observation: Priority queue contains <code>{dist, u}</code>. Handles non-negative edge graphs.
+            </div>
+            <div class="card-b-code"><span class="token-kw">using</span> <span class="token-type">pli</span> = <span class="token-type">pair</span>&lt;<span class="token-type">long long</span>, <span class="token-type">int</span>&gt;;
+<span class="token-type">void</span> <span class="token-fn">dijkstra</span>(<span class="token-type">int</span> src, <span class="token-type">int</span> n) {
+    <span class="token-type">priority_queue</span>&lt;<span class="token-type">pli</span>, <span class="token-type">vector</span>&lt;<span class="token-type">pli</span>&gt;, <span class="token-type">greater</span>&lt;<span class="token-type">pli</span>&gt;&gt; pq;
+    dist.<span class="token-fn">assign</span>(n + <span class="token-num">1</span>, INF);
+    dist[src] = <span class="token-num">0</span>;
+    pq.<span class="token-fn">push</span>({<span class="token-num">0</span>, src});
+    <span class="token-kw">while</span> (!pq.<span class="token-fn">empty</span>()) {
+        <span class="token-kw">auto</span> [d, u] = pq.<span class="token-fn">top</span>(); pq.<span class="token-fn">pop</span>();
+        <span class="token-kw">if</span> (d &gt; dist[u]) <span class="token-kw">continue</span>;
+        <span class="token-kw">for</span> (<span class="token-kw">auto</span>&amp; [v, w] : adj[u]) {
+            <span class="token-kw">if</span> (dist[u] + w &lt; dist[v]) {
+                dist[v] = dist[u] + w;
+                pq.<span class="token-fn">push</span>({dist[v], v});
+            }
+        }
+    }
+}</div>
+          </div>
+        </div>
+
+        <div class="sheet-section-title">Note Card Example</div>
+
+        <!-- Note Card B Example -->
+        <div class="card-b-note">
+          <div class="card-b-windowbar">
+            <div class="card-b-controls">
+              <span class="card-b-dot" style="background:#EF4444;"></span>
+              <span class="card-b-dot" style="background:#F59E0B;"></span>
+              <span class="card-b-dot" style="background:#10B981;"></span>
+            </div>
+            <div class="card-b-filetab">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+              <span>coordinate_compression.md</span>
+            </div>
+            <span class="card-b-note-badge">MARKDOWN</span>
+          </div>
+          <div class="card-b-body">
+            <div class="card-b-title-line">Coordinate Compression</div>
+            <div class="card-b-note-body">
+              <p><strong>Algorithm Checklist:</strong></p>
+              <ul>
+                <li>Vector insert: <code>vals.push_back(x);</code></li>
+                <li>Sort &amp; unique: <code>sort(all(v)); v.erase(unique(all(v)), v.end());</code></li>
+                <li>Rank query: <code>lower_bound(all(v), x) - v.begin();</code></li>
+              </ul>
+              <p><strong>Gotcha:</strong> Verify whether 1-based indexing is needed (add <code>+ 1</code>).</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="sheet-section-title">Setup Template Example</div>
+
+        <!-- Template Card B Example -->
+        <div class="template-card-b">
+          <div class="template-card-b-windowbar">
+            <div class="tmpl-b-title">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+              <span>template.cpp &bull; Fast I/O &amp; Macros</span>
+            </div>
+            <span class="tmpl-b-status">MAIN BUFFER</span>
+          </div>
+          <div class="template-card-b-body"><span class="token-kw">#include</span> <span class="token-str">&lt;bits/stdc++.h&gt;</span>
+<span class="token-kw">using</span> <span class="token-kw">namespace</span> std;
+
+<span class="token-kw">#define</span> fast_io ios::sync_with_stdio(<span class="token-num">0</span>); cin.tie(<span class="token-num">0</span>);
+<span class="token-kw">#define</span> all(x)  (x).begin(), (x).end()
+<span class="token-kw">#define</span> sz(x)   (int)(x).size()
+<span class="token-kw">using</span> ll = <span class="token-type">long long</span>;
+<span class="token-kw">const</span> ll INF = <span class="token-num">1e18</span>;
+
+<span class="token-type">int</span> <span class="token-fn">main</span>() {
+    fast_io;
+    <span class="token-type">int</span> tc = <span class="token-num">1</span>;
+    <span class="token-kw">while</span> (tc--) solve();
+}</div>
+        </div>
+
+        <div class="pros-list">
+          <div class="pro-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>আসল কোডিং আইডিই / সফটওয়্যার আর্কিটেকচার ফিল দেয়</span>
+          </div>
+          <div class="pro-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>ফাইলনেম ট্যাব থাকায় কোড খুঁজে পাওয়া সহজ হয়</span>
+          </div>
+          <div class="pro-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>স্ক্রিনে দেখতে অত্যন্ত আকর্ষণীয় ও টেকনিক্যাল</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==============================================================
+         COLUMN 3: OPTION C (ACADEMIC / ICPC WORLD FINALS BOOKLET)
+         ============================================================== -->
+    <div class="mockup-column">
+      <div class="column-header">
+        <span class="col-tag col-tag-c">Option C</span>
+        <h2 class="col-title">ICPC World Finals Manual</h2>
+        <p class="col-summary">
+          ম্যাক্সিমাম ডেনসিটি ও ইনফরমেশন পার স্কয়ার ইঞ্চি। শার্প টেকনিক্যাল রুলার, ডুয়েল-টিয়ার হেডার এবং ক্লাসিক প্রেস বুকলেট স্টাইল।
+        </p>
+      </div>
+
+      <div class="paper-sheet">
+        <div class="sheet-section-title">Snippet Card Example</div>
+
+        <!-- Card C Example -->
+        <div class="card-c">
+          <div class="card-c-topbar">
+            <span class="card-c-category">GRAPH THEORY // 03</span>
+            <span class="card-c-complexity">O((V + E) log V)</span>
+          </div>
+          <div class="card-c-title">Dijkstra's Shortest Path</div>
+          <div class="card-c-notes">
+            &bull; Non-negative weights &bull; Min-heap pq &bull; Space: O(V + E)
+          </div>
+          <div class="card-c-code"><span class="token-kw">using</span> <span class="token-type">pli</span> = <span class="token-type">pair</span>&lt;<span class="token-type">long long</span>, <span class="token-type">int</span>&gt;;
+<span class="token-type">void</span> <span class="token-fn">dijkstra</span>(<span class="token-type">int</span> src, <span class="token-type">int</span> n) {
+    <span class="token-type">priority_queue</span>&lt;<span class="token-type">pli</span>, <span class="token-type">vector</span>&lt;<span class="token-type">pli</span>&gt;, <span class="token-type">greater</span>&lt;<span class="token-type">pli</span>&gt;&gt; pq;
+    dist.<span class="token-fn">assign</span>(n + <span class="token-num">1</span>, INF);
+    dist[src] = <span class="token-num">0</span>;
+    pq.<span class="token-fn">push</span>({<span class="token-num">0</span>, src});
+    <span class="token-kw">while</span> (!pq.<span class="token-fn">empty</span>()) {
+        <span class="token-kw">auto</span> [d, u] = pq.<span class="token-fn">top</span>(); pq.<span class="token-fn">pop</span>();
+        <span class="token-kw">if</span> (d &gt; dist[u]) <span class="token-kw">continue</span>;
+        <span class="token-kw">for</span> (<span class="token-kw">auto</span>&amp; [v, w] : adj[u]) {
+            <span class="token-kw">if</span> (dist[u] + w &lt; dist[v]) {
+                dist[v] = dist[u] + w;
+                pq.<span class="token-fn">push</span>({dist[v], v});
+            }
+        }
+    }
+}</div>
+        </div>
+
+        <div class="sheet-section-title">Note Card Example</div>
+
+        <!-- Note Card C Example -->
+        <div class="card-c-note">
+          <div class="card-c-topbar">
+            <span class="card-c-category">DATA STRUCTURES // NOTE 01</span>
+            <span class="card-c-note-badge">OBSERVATION</span>
+          </div>
+          <div class="card-c-title">Coordinate Compression Guidelines</div>
+          <div class="card-c-notes">&bull; Domain: &le; 10⁹ &bull; Space: O(N) &bull; Query: O(log N)</div>
+          <div class="card-c-note-body">
+            <p><strong>Procedure:</strong></p>
+            <ul>
+              <li>1. Aggregate queries into <code>vector&lt;int&gt; v;</code></li>
+              <li>2. Sort &amp; compact: <code>sort(all(v)); v.erase(unique(all(v)), v.end());</code></li>
+              <li>3. Binary search rank: <code>lower_bound(all(v), x) - v.begin();</code></li>
+            </ul>
+            <p><strong>Important:</strong> If Fenwick / BIT used, 1-index required (add <code>+ 1</code>).</p>
+          </div>
+        </div>
+
+        <div class="sheet-section-title">Setup Template Example</div>
+
+        <!-- Template Card C Example -->
+        <div class="template-card-c">
+          <div class="template-card-c-header">
+            <span class="tmpl-c-title">CONTEST SETUP SPECIFICATION</span>
+            <span class="tmpl-c-meta">PART 1 &bull; FAST I/O</span>
+          </div>
+          <div class="template-card-c-body"><span class="token-kw">#include</span> <span class="token-str">&lt;bits/stdc++.h&gt;</span>
+<span class="token-kw">using</span> <span class="token-kw">namespace</span> std;
+
+<span class="token-kw">#define</span> fast_io ios::sync_with_stdio(<span class="token-num">0</span>); cin.tie(<span class="token-num">0</span>);
+<span class="token-kw">#define</span> all(x)  (x).begin(), (x).end()
+<span class="token-kw">#define</span> sz(x)   (int)(x).size()
+<span class="token-kw">using</span> ll = <span class="token-type">long long</span>;
+<span class="token-kw">const</span> ll INF = <span class="token-num">1e18</span>;
+
+<span class="token-type">int</span> <span class="token-fn">main</span>() {
+    fast_io;
+    <span class="token-type">int</span> tc = <span class="token-num">1</span>;
+    <span class="token-kw">while</span> (tc--) solve();
+}</div>
+        </div>
+
+        <div class="pros-list">
+          <div class="pro-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>এক পাতায় সবচেয়ে বেশি কোড আঁটে (সর্বোচ্চ ডেনসিটি)</span>
+          </div>
+          <div class="pro-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>স্ট্যানফোর্ড / এমআইটি / ওয়ারশ কোডবুকের ঐতিহ্যবাহী ক্লাসিক স্টাইল</span>
+          </div>
+          <div class="pro-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>শার্প ও মনোক্রোম প্রিন্টারের জন্য ১০০% নির্ভুল</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

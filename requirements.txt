@@ -4,3 +4,6 @@ pypdf
 matplotlib
 pygments
 Pillow
+werkzeug
+gunicorn
+python-dotenv

@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Console | Codebook Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}?v=2">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}?v=2">
+  <style>
+    @font-face {
+      font-family: 'Gebuk';
+      src: url('/static/fonts/Gebuk-Regular.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      /* Craft.do & Apple Clean Light Design System */
+      --bg-base: #F8F9FB;
+      --bg-surface: #FFFFFF;
+      --bg-surface-elevated: #F8FAFC;
+      --bg-surface-hover: #F1F5F9;
+      --border-subtle: #E2E8F0;
+      --border-strong: #CBD5E1;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --text-dim: #94A3B8;
+      --accent: #0071E3;
+      --accent-hover: #0077ED;
+      --accent-soft: rgba(0, 113, 227, 0.08);
+      --success: #10B981;
+      --success-soft: rgba(16, 185, 129, 0.1);
+      --warning: #F59E0B;
+      --warning-soft: rgba(245, 158, 11, 0.1);
+      --danger: #EF4444;
+      --danger-soft: rgba(239, 68, 68, 0.08);
+      --purple: #8B5CF6;
+      --purple-soft: rgba(139, 92, 246, 0.1);
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+      --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+    /* Layout */
+    .admin-wrapper {
+      display: flex;
+      width: 100vw;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      z-index: 20;
+    }
+
+    .brand-section {
+      padding: 20px 22px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .brand-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-start;
+    }
+    .brand-text-gebuk {
+      font-family: 'Gebuk', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      font-size: 20px !important;
+      font-weight: normal !important;
+      letter-spacing: 0.02em !important;
+      color: #0E0E0E !important;
+      line-height: 1.1 !important;
+      display: inline-block;
+    }
+    .brand-pill {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #0071E3;
+      background: rgba(0, 113, 227, 0.08);
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 113, 227, 0.2);
+      width: fit-content;
+    }
+
+    .nav-menu {
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .nav-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 10px 10px 4px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      border: 1px solid transparent;
+      position: relative;
+    }
+    .nav-item:hover {
+      background: var(--bg-surface-hover);
+      color: var(--text-main);
+    }
+    .nav-item.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: rgba(0, 113, 227, 0.18);
+      font-weight: 600;
+    }
+    .nav-item svg {
+      width: 17px;
+      height: 17px;
+      stroke-width: 2;
+      flex-shrink: 0;
+    }
+    .nav-badge-pending {
+      margin-left: auto;
+      background: #EF4444;
+      color: #FFFFFF;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-family: var(--font-mono);
+    }
+
+    .sidebar-footer {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border-subtle);
+      background: #FAFBFD;
+    }
+    .admin-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .admin-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #8B5CF6;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      flex-shrink: 0;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .admin-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .admin-meta {
+      flex: 1;
+      min-width: 0;
+    }
+    .admin-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .admin-role-badge {
+      font-size: 10.5px;
+      font-family: var(--font-mono);
+      color: #8B5CF6;
+      font-weight: 600;
+    }
+    .btn-return-app {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      width: 100%;
+      padding: 8px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .btn-return-app:hover {
+      background: var(--bg-surface-hover);
+      color: var(--text-main);
+      border-color: var(--border-strong);
+    }
+
+    /* Main Container */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: var(--bg-base);
+    }
+
+    /* Topbar */
+    .topbar {
+      height: 64px;
+      background: #FFFFFF;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      position: sticky;
+      top: 0;
+      z-index: 15;
+      box-shadow: var(--shadow-sm);
+    }
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .page-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.01em;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: var(--success-soft);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      color: #059669;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10B981;
+      box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+      animation: pulseLive 2s infinite ease-in-out;
+    }
+    @keyframes pulseLive {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-action-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .btn-action-ghost:hover {
+      background: var(--bg-surface-hover);
+      color: var(--text-main);
+      border-color: var(--border-strong);
+    }
+    .btn-action-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--accent);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      color: #FFFFFF;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      box-shadow: 0 1px 4px rgba(0, 113, 227, 0.25);
+    }
+    .btn-action-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0, 113, 227, 0.35);
+    }
+
+    /* Content Area */
+    .content-body {
+      padding: 32px;
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Tab Panes */
+    .tab-pane {
+      display: none;
+      animation: fadeIn 0.15s ease-in-out;
+    }
+    .tab-pane.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(2px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    .kpi-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+    }
+    .kpi-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    .kpi-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .kpi-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .kpi-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .kpi-card.blue .kpi-icon { background: rgba(0, 113, 227, 0.08); color: #0071E3; }
+    .kpi-card.emerald .kpi-icon { background: rgba(16, 185, 129, 0.08); color: #059669; }
+    .kpi-card.purple .kpi-icon { background: rgba(139, 92, 246, 0.08); color: #7C3AED; }
+    .kpi-card.amber .kpi-icon { background: rgba(245, 158, 11, 0.08); color: #D97706; }
+
+    .kpi-value {
+      font-size: 28px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+    }
+    .kpi-subtext {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge-pill-inline {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 4px;
+      background: var(--bg-surface-elevated);
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* Cards / Surfaces */
+    .dashboard-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .panel-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .panel-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .panel-subtitle {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    /* Alert Banner */
+    .pending-alert-banner {
+      background: #FEF3C7;
+      border: 1px solid #FCD34D;
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #92400E;
+      font-size: 13.5px;
+    }
+    .pending-alert-content {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+    }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    table.data-table th {
+      background: var(--bg-surface-elevated);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+    table.data-table td {
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+    table.data-table tr:hover td {
+      background: #F8FAFC;
+    }
+    table.data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Table Badges */
+    .user-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-avatar-cell {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+      color: #FFFFFF;
+      flex-shrink: 0;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+    .user-avatar-cell img { width: 100%; height: 100%; object-fit: cover; }
+    .user-name-title { font-weight: 600; color: var(--text-main); }
+    .user-id-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
+
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .role-badge.admin {
+      background: rgba(139, 92, 246, 0.1);
+      color: #7C3AED;
+      border: 1px solid rgba(139, 92, 246, 0.25);
+    }
+    .role-badge.user {
+      background: #F1F5F9;
+      color: #64748B;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .provider-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+    .status-pill.success, .status-pill.approved {
+      background: rgba(16, 185, 129, 0.1);
+      color: #059669;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    .status-pill.failed, .status-pill.danger {
+      background: rgba(239, 68, 68, 0.08);
+      color: #DC2626;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    .status-pill.pending {
+      background: #FEF3C7;
+      color: #B45309;
+      border: 1px solid #FCD34D;
+    }
+
+    /* Actions */
+    .btn-table-action {
+      padding: 4px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      border-radius: 5px;
+      background: #FFFFFF;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .btn-table-action:hover {
+      background: var(--bg-surface-hover);
+      border-color: var(--border-strong);
+    }
+    .btn-table-success {
+      padding: 4px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      border-radius: 5px;
+      background: #ECFDF5;
+      border: 1px solid #A7F3D0;
+      color: #059669;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-table-success:hover {
+      background: #D1FAE5;
+      border-color: #6EE7B7;
+    }
+    .btn-table-danger {
+      padding: 4px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      border-radius: 5px;
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      color: #DC2626;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-table-danger:hover {
+      background: #FEE2E2;
+      border-color: #FCA5A5;
+    }
+
+    /* Search & Filter Bar */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #FFFFFF;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 7px 12px;
+      min-width: 280px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .search-box svg { color: var(--text-dim); }
+    .search-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-main);
+      font-size: 13px;
+      width: 100%;
+    }
+    .search-input::placeholder { color: var(--text-dim); }
+
+    .filter-pills {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .filter-pill {
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: #FFFFFF;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-pill:hover { background: var(--bg-surface-hover); color: var(--text-main); }
+    .filter-pill.active {
+      background: var(--accent-soft);
+      border-color: rgba(0, 113, 227, 0.25);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* Maintenance Grid */
+    .maintenance-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .tool-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+    .tool-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .tool-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .tool-meta h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+    .tool-meta p {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .tool-btn {
+      width: 100%;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+    .tool-btn-primary {
+      background: var(--accent);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      color: #FFFFFF;
+      box-shadow: 0 1px 3px rgba(0, 113, 227, 0.2);
+    }
+    .tool-btn-primary:hover { background: var(--accent-hover); }
+    .tool-btn-secondary {
+      background: #FFFFFF;
+      border: 1px solid var(--border-strong);
+      color: var(--text-main);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .tool-btn-secondary:hover { background: var(--bg-surface-hover); }
+    .tool-btn-danger {
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      color: #DC2626;
+    }
+    .tool-btn-danger:hover { background: #FEE2E2; }
+
+    /* Starter Pack Cards */
+    .starter-topics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .starter-topic-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .topic-dot-lg {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .starter-topic-name { font-weight: 600; font-size: 13px; color: var(--text-main); }
+    .starter-topic-order { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim); margin-left: auto; }
+
+    .snippets-catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 16px;
+    }
+    .snippet-preview-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: var(--shadow-sm);
+    }
+    .snippet-preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .snippet-kind-tag {
+      font-size: 10.5px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .snippet-kind-tag.code { background: rgba(0, 113, 227, 0.08); color: #0071E3; }
+    .snippet-kind-tag.note { background: rgba(245, 158, 11, 0.1); color: #D97706; }
+    .snippet-title-lg { font-size: 14px; font-weight: 700; color: var(--text-main); }
+    .snippet-subtitle-dim { font-size: 12px; color: var(--text-muted); }
+    .snippet-complexity-pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--bg-surface-elevated);
+      padding: 2px 7px;
+      border-radius: 4px;
+      width: fit-content;
+      margin-top: 4px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toast {
+      background: #0F172A;
+      color: #FFFFFF;
+      border-radius: 8px;
+      padding: 12px 18px;
+      font-size: 13px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideIn 0.2s ease-out;
+    }
+    .toast.success { border-left: 4px solid #10B981; }
+    .toast.error { border-left: 4px solid #EF4444; }
+    @keyframes slideIn {
+      from { transform: translateX(20px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 20px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+    }
+    .modal-title { font-size: 17px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+    .modal-text { font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px; }
+    .modal-field {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .modal-label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+    .modal-input {
+      padding: 9px 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      color: var(--text-main);
+      outline: none;
+      transition: border 0.15s;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+  </style>
+</head>
+<body>
+
+<div class="admin-wrapper">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand-section">
+      <div class="brand-info">
+        <span class="craft-brand-name brand-text-gebuk">Codebook Studio</span>
+        <span class="brand-pill">ADMIN CONSOLE</span>
+      </div>
+    </div>
+
+    <nav class="nav-menu">
+      <div class="nav-label">Management</div>
+      <a class="nav-item active" data-tab="tab-overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
+        Overview
+      </a>
+      <a class="nav-item" data-tab="tab-institutions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 21h18"/><path d="M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4"/><line x1="9" y1="21" x2="9" y2="11"/><line x1="15" y1="21" x2="15" y2="11"/></svg>
+        Institutions & Teams
+        <span class="nav-badge-pending" id="nav-pending-badge" style="display: none;">0</span>
+      </a>
+      <a class="nav-item" data-tab="tab-users">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Users
+      </a>
+      <a class="nav-item" data-tab="tab-starter">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Starter Pack
+      </a>
+      <a class="nav-item" data-tab="tab-builds">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Build Logs
+      </a>
+      <div class="nav-label" style="margin-top: 10px;">System</div>
+      <a class="nav-item" data-tab="tab-maintenance">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        Maintenance
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="admin-profile">
+        <div class="admin-avatar" style="background: {{ current_admin.avatar_color if current_admin else '#8B5CF6' }}">
+          {% if current_admin and current_admin.avatar_url %}
+            <img src="{{ current_admin.avatar_url }}" alt="Avatar">
+          {% else %}
+            {{ (current_admin.name[0] if current_admin and current_admin.name else 'A') | upper }}
+          {% endif %}
+        </div>
+        <div class="admin-meta">
+          <div class="admin-name">{{ current_admin.name if current_admin else 'Admin' }}</div>
+          <div class="admin-role-badge">Super Admin</div>
+        </div>
+      </div>
+      <a href="/" class="btn-return-app">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to Codebook Studio
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="page-heading">Dashboard Overview</h1>
+        <div class="status-badge">
+          <span class="pulse-dot"></span>
+          Engine Active
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn-action-ghost" id="btn-refresh-data" title="Reload all metrics">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
+        <button class="btn-action-primary" id="btn-quick-add-uni" onclick="openAddInstitutionModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add University
+        </button>
+      </div>
+    </header>
+
+    <div class="content-body">
+      <!-- 1. OVERVIEW TAB -->
+      <section id="tab-overview" class="tab-pane active">
+        <!-- Pending Suggestions Notification Banner if any -->
+        <div class="pending-alert-banner" id="overview-pending-banner" style="display: none;">
+          <div class="pending-alert-content">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span><strong id="pending-banner-count">0</strong> custom university suggestions submitted by users are waiting for your review.</span>
+          </div>
+          <button class="btn-table-action" onclick="switchTab('tab-institutions'); filterInstitutions('pending');">Review Now</button>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card blue">
+            <div class="kpi-header">
+              <span class="kpi-title">Active Universities</span>
+              <div class="kpi-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value" id="kpi-unis-count">-</div>
+            <div class="kpi-subtext">
+              <span class="badge-pill-inline" id="kpi-unis-used">0 Visited</span>
+              <span id="kpi-unis-pending">0 Pending Review</span>
+            </div>
+          </div>
+
+          <div class="kpi-card purple">
+            <div class="kpi-header">
+              <span class="kpi-title">Contest Teams</span>
+              <div class="kpi-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value" id="kpi-teams-count">-</div>
+            <div class="kpi-subtext">
+              <span class="badge-pill-inline" id="kpi-total-users-sub">0 Users</span>
+              <span>Active in Studio</span>
+            </div>
+          </div>
+
+          <div class="kpi-card emerald">
+            <div class="kpi-header">
+              <span class="kpi-title">PDFs Exported</span>
+              <div class="kpi-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value" id="kpi-total-builds">-</div>
+            <div class="kpi-subtext">
+              <span class="badge-pill-inline" id="kpi-success-rate">100% Success</span>
+              <span id="kpi-avg-duration">~0ms avg</span>
+            </div>
+          </div>
+
+          <div class="kpi-card amber">
+            <div class="kpi-header">
+              <span class="kpi-title">Algorithmic Content</span>
+              <div class="kpi-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value" id="kpi-total-snippets">-</div>
+            <div class="kpi-subtext">
+              <span class="badge-pill-inline" id="kpi-code-count">0 Code</span>
+              <span id="kpi-notes-count">0 Notes</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <!-- Top Universities Panel -->
+          <div class="dashboard-panel">
+            <div class="panel-header">
+              <div class="panel-title-group">
+                <h2 class="panel-title">Top Universities by Usage</h2>
+                <span class="panel-subtitle">Institutions actively using Codebook Studio</span>
+              </div>
+              <button class="btn-table-action" onclick="switchTab('tab-institutions')">View All</button>
+            </div>
+            <div id="overview-top-unis-list" style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="text-align: center; color: var(--text-dim); padding: 18px;">Loading universities...</div>
+            </div>
+          </div>
+
+          <!-- Active Teams Panel -->
+          <div class="dashboard-panel">
+            <div class="panel-header">
+              <div class="panel-title-group">
+                <h2 class="panel-title">Recent Contest Teams</h2>
+                <span class="panel-subtitle">Teams creating reference codebooks</span>
+              </div>
+              <button class="btn-table-action" onclick="switchTab('tab-users')">View Users</button>
+            </div>
+            <div id="overview-recent-teams-list" style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="text-align: center; color: var(--text-dim); padding: 18px;">Loading teams...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. INSTITUTIONS & TEAMS TAB -->
+      <section id="tab-institutions" class="tab-pane">
+        <div class="dashboard-panel">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <h2 class="panel-title">University & Team Directory</h2>
+              <span class="panel-subtitle">Manage approved institutions, review new user suggestions, and track university usage</span>
+            </div>
+            <button class="btn-action-primary" onclick="openAddInstitutionModal()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Institution
+            </button>
+          </div>
+
+          <div class="filter-bar">
+            <div class="search-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="institutions-search" class="search-input" placeholder="Search university full name or acronym...">
+            </div>
+            <div class="filter-pills">
+              <button class="filter-pill active" id="filter-inst-all" onclick="filterInstitutions('all')">All (<span id="inst-count-all">0</span>)</button>
+              <button class="filter-pill" id="filter-inst-pending" onclick="filterInstitutions('pending')">Pending Suggestions (<span id="inst-count-pending">0</span>)</button>
+              <button class="filter-pill" id="filter-inst-used" onclick="filterInstitutions('used')">Active / Used (<span id="inst-count-used">0</span>)</button>
+              <button class="filter-pill" id="filter-inst-approved" onclick="filterInstitutions('approved')">Official Approved</button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">#</th>
+                  <th>Institution Name</th>
+                  <th>Short Code</th>
+                  <th>Status</th>
+                  <th>Codebooks Built</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="institutions-table-body">
+                <tr><td colspan="6" style="text-align: center; color: var(--text-dim);">Loading universities...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. USERS TAB -->
+      <section id="tab-users" class="tab-pane">
+        <div class="dashboard-panel">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <h2 class="panel-title">Registered Accounts</h2>
+              <span class="panel-subtitle">Manage programmers, teams, and administrator privileges</span>
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <div class="search-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="users-search" class="search-input" placeholder="Search by name, email, university or team...">
+            </div>
+            <div class="filter-pills">
+              <button class="filter-pill active" data-filter="all">All</button>
+              <button class="filter-pill" data-filter="admin">Admins</button>
+              <button class="filter-pill" data-filter="google">Google</button>
+              <button class="filter-pill" data-filter="github">GitHub</button>
+              <button class="filter-pill" data-filter="local">Email</button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>User Profile</th>
+                  <th>Email Address</th>
+                  <th>Institution & Team</th>
+                  <th>Auth Provider</th>
+                  <th>Snippets</th>
+                  <th>Role</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="users-table-body">
+                <tr><td colspan="7" style="text-align: center; color: var(--text-dim);">Loading users...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. STARTER PACK TAB -->
+      <section id="tab-starter" class="tab-pane">
+        <div class="dashboard-panel">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <h2 class="panel-title">Official Starter Library</h2>
+              <span class="panel-subtitle">Default algorithmic categories, code templates, and reference cards seeded for new accounts</span>
+            </div>
+          </div>
+
+          <h3 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin-bottom: 12px;">Seeded Topic Categories</h3>
+          <div class="starter-topics-grid" id="starter-topics-container"></div>
+
+          <h3 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin: 24px 0 12px;">Curated Algorithms & Reference Cards</h3>
+          <div class="snippets-catalog-grid" id="starter-snippets-container"></div>
+        </div>
+      </section>
+
+      <!-- 5. BUILD LOGS TAB -->
+      <section id="tab-builds" class="tab-pane">
+        <div class="dashboard-panel">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <h2 class="panel-title">PDF Build & Export Logs</h2>
+              <span class="panel-subtitle">Diagnostic trace of headless Chrome rendering, universities, teams and page counts</span>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>User / Email</th>
+                  <th>Institution & Team</th>
+                  <th>Engine</th>
+                  <th>Pages</th>
+                  <th>Render Time</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="builds-table-body">
+                <tr><td colspan="7" style="text-align: center; color: var(--text-dim);">Loading logs...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. MAINTENANCE TAB -->
+      <section id="tab-maintenance" class="tab-pane">
+        <div class="maintenance-grid">
+          <div class="tool-card">
+            <div class="tool-header">
+              <div class="tool-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+              </div>
+              <div class="tool-meta">
+                <h3>Download Database Snapshot</h3>
+                <p>Creates an instant binary copy of <code style="font-family: var(--font-mono); color: #0071E3;">codebook.db</code> for offsite backup, analytics, or migration.</p>
+              </div>
+            </div>
+            <a href="/api/admin/maintenance/backup-db" class="tool-btn tool-btn-primary">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export SQLite Database
+            </a>
+          </div>
+
+          <div class="tool-card">
+            <div class="tool-header">
+              <div class="tool-icon" style="color: #D97706;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              </div>
+              <div class="tool-meta">
+                <h3>Purge Build Artifacts & Cache</h3>
+                <p>Cleans temporary HTML and PDF files in <code style="font-family: var(--font-mono); color: #D97706;">output/</code> without impacting active databases or templates.</p>
+              </div>
+            </div>
+            <button class="tool-btn tool-btn-secondary" id="btn-clear-cache">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              Purge Build Cache
+            </button>
+          </div>
+
+          <div class="tool-card">
+            <div class="tool-header">
+              <div class="tool-icon" style="color: #DC2626;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              </div>
+              <div class="tool-meta">
+                <h3>Purge Soft-Deleted Trash</h3>
+                <p>Permanently deletes snippets and topics that have been moved to Trash, freeing space immediately.</p>
+              </div>
+            </div>
+            <button class="tool-btn tool-btn-danger" id="btn-purge-trash">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+              Permanently Purge Trash
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- Modal: Confirm Delete User / Institution -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal-card">
+    <h3 class="modal-title" id="modal-title">Confirm Action</h3>
+    <p class="modal-text" id="modal-text">Are you sure you want to proceed?</p>
+    <div class="modal-actions">
+      <button class="btn-action-ghost" id="modal-btn-cancel">Cancel</button>
+      <button class="btn-table-danger" id="modal-btn-confirm" style="padding: 8px 16px;">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add / Edit Institution -->
+<div class="modal-overlay" id="institution-modal">
+  <div class="modal-card">
+    <h3 class="modal-title" id="inst-modal-title">Add University</h3>
+    <p class="modal-text" id="inst-modal-desc">Add a new university to the official directory.</p>
+    <div class="modal-field">
+      <label class="modal-label">Institution Full Name *</label>
+      <input type="text" id="modal-inst-name" class="modal-input" placeholder="e.g. DHAKA UNIVERSITY OF ENGINEERING & TECHNOLOGY">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Short Code / Acronym (Optional)</label>
+      <input type="text" id="modal-inst-short" class="modal-input" placeholder="e.g. DUET">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-action-ghost" onclick="closeInstitutionModal()">Cancel</button>
+      <button class="btn-action-primary" id="modal-inst-save-btn">Save Institution</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+  let cachedUsers = [];
+  let cachedInstitutions = [];
+  let userFilter = 'all';
+  let instFilter = 'all';
+  let editingInstId = null;
+
+  function showToast(msg, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(10px)';
+      toast.style.transition = 'all 0.2s';
+      setTimeout(() => toast.remove(), 200);
+    }, 3200);
+  }
+
+  function formatDate(unixSec) {
+    if (!unixSec) return '-';
+    const d = new Date(unixSec * 1000);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function formatTime(unixSec) {
+    if (!unixSec) return '-';
+    const d = new Date(unixSec * 1000);
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // Tab switching
+  function switchTab(tabId) {
+    document.querySelectorAll('.nav-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.tab === tabId);
+    });
+    document.querySelectorAll('.tab-pane').forEach(el => {
+      el.classList.toggle('active', el.id === tabId);
+    });
+
+    const titles = {
+      'tab-overview': 'Dashboard Overview',
+      'tab-institutions': 'University & Team Directory',
+      'tab-users': 'Registered Programmers & Roles',
+      'tab-starter': 'Official Starter Library',
+      'tab-builds': 'PDF Build Diagnostics',
+      'tab-maintenance': 'System Utilities & Backup'
+    };
+    document.getElementById('page-heading').textContent = titles[tabId] || 'Admin Console';
+
+    if (tabId === 'tab-overview') loadStats();
+    if (tabId === 'tab-institutions') loadInstitutions();
+    if (tabId === 'tab-users') loadUsers();
+    if (tabId === 'tab-starter') loadStarterPack();
+    if (tabId === 'tab-builds') loadBuildLogs();
+  }
+
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchTab(el.dataset.tab);
+    });
+  });
+
+  // Load Dashboard Stats
+  async function loadStats() {
+    try {
+      const res = await fetch('/api/admin/stats');
+      const data = await res.json();
+      if (!data.ok) return;
+
+      // Unis & Teams KPIs
+      document.getElementById('kpi-unis-count').textContent = data.universities.total_institutions;
+      document.getElementById('kpi-unis-used').textContent = `${data.universities.total_used} Visited`;
+      document.getElementById('kpi-unis-pending').textContent = `${data.universities.pending_count} Pending Review`;
+
+      document.getElementById('kpi-teams-count').textContent = data.teams.total_teams;
+      document.getElementById('kpi-total-users-sub').textContent = `${data.users.total} Users`;
+
+      document.getElementById('kpi-total-builds').textContent = data.builds.total;
+      document.getElementById('kpi-success-rate').textContent = `${data.builds.success_rate}% Success`;
+      document.getElementById('kpi-avg-duration').textContent = `~${data.builds.avg_duration_ms}ms avg`;
+
+      document.getElementById('kpi-total-snippets').textContent = data.content.total_snippets;
+      document.getElementById('kpi-code-count').textContent = `${data.content.total_codes} Code`;
+      document.getElementById('kpi-notes-count').textContent = `${data.content.total_notes} Notes`;
+
+      // Pending banner in overview & nav badge
+      const pendingBanner = document.getElementById('overview-pending-banner');
+      const navBadge = document.getElementById('nav-pending-badge');
+      if (data.universities.pending_count > 0) {
+        pendingBanner.style.display = 'flex';
+        document.getElementById('pending-banner-count').textContent = data.universities.pending_count;
+        navBadge.style.display = 'inline-block';
+        navBadge.textContent = data.universities.pending_count;
+      } else {
+        pendingBanner.style.display = 'none';
+        navBadge.style.display = 'none';
+      }
+
+      // Top Unis List
+      const topUnisContainer = document.getElementById('overview-top-unis-list');
+      if (data.universities.top_universities && data.universities.top_universities.length > 0) {
+        topUnisContainer.innerHTML = data.universities.top_universities.map(u => `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 8px;">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-weight: 600; font-size: 13px; color: var(--text-main);">${escapeHtml(u.name)}</span>
+              ${u.short_name ? `<span style="font-size: 11px; font-weight: 600; color: #0071E3;">${escapeHtml(u.short_name)}</span>` : ''}
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="badge-pill-inline" style="background: rgba(0, 113, 227, 0.08); color: #0071E3; font-size: 12px; font-weight: 700;">${u.use_count} ${u.use_count === 1 ? 'Build' : 'Builds'}</span>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        topUnisContainer.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 14px;">No university activity recorded yet.</div>';
+      }
+
+      // Recent Teams List
+      const recentTeamsContainer = document.getElementById('overview-recent-teams-list');
+      if (data.teams.recent_teams && data.teams.recent_teams.length > 0) {
+        recentTeamsContainer.innerHTML = data.teams.recent_teams.map(t => `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: #0071E3;"></span>
+              <span style="font-weight: 600; font-size: 13px; color: var(--text-main);">${escapeHtml(t.team_name)}</span>
+            </div>
+            <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">${escapeHtml(t.institution_name || 'Independent')}</span>
+          </div>
+        `).join('');
+      } else {
+        recentTeamsContainer.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 14px;">No active teams yet.</div>';
+      }
+
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Load Institutions Directory
+  async function loadInstitutions() {
+    try {
+      const res = await fetch('/api/admin/institutions');
+      const data = await res.json();
+      if (!data.ok) return;
+
+      cachedInstitutions = data.institutions;
+      document.getElementById('inst-count-all').textContent = data.count;
+      document.getElementById('inst-count-pending').textContent = data.pending_count;
+      document.getElementById('inst-count-used').textContent = data.institutions.filter(i => i.use_count > 0).length;
+
+      const navBadge = document.getElementById('nav-pending-badge');
+      if (data.pending_count > 0) {
+        navBadge.style.display = 'inline-block';
+        navBadge.textContent = data.pending_count;
+      } else {
+        navBadge.style.display = 'none';
+      }
+
+      renderInstitutionsTable();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function filterInstitutions(filter) {
+    instFilter = filter;
+    document.querySelectorAll('.filter-pills .filter-pill').forEach(b => {
+      b.classList.remove('active');
+    });
+    const activeBtn = document.getElementById(`filter-inst-${filter}`);
+    if (activeBtn) activeBtn.classList.add('active');
+    renderInstitutionsTable();
+  }
+
+  function renderInstitutionsTable() {
+    const q = (document.getElementById('institutions-search').value || '').toLowerCase().trim();
+    const tbody = document.getElementById('institutions-table-body');
+
+    let filtered = cachedInstitutions.filter(i => {
+      if (instFilter === 'pending' && i.status !== 'pending') return false;
+      if (instFilter === 'approved' && i.status !== 'approved') return false;
+      if (instFilter === 'used' && (!i.use_count || i.use_count === 0)) return false;
+
+      if (q) {
+        const matchName = (i.name || '').toLowerCase().includes(q);
+        const matchShort = (i.short_name || '').toLowerCase().includes(q);
+        if (!matchName && !matchShort) return false;
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">No institutions found matching criteria.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(i => `
+      <tr style="${i.status === 'pending' ? 'background: #FFFBEB;' : ''}">
+        <td style="font-family: var(--font-mono); color: var(--text-dim); font-size: 11px;">${i.index || i.id}</td>
+        <td>
+          <div style="font-weight: 600; color: var(--text-main);">${escapeHtml(i.name)}</div>
+          ${i.suggested_by && i.suggested_by !== 'system' && i.suggested_by !== 'admin' ? `<div style="font-size: 11px; color: var(--text-muted);">Suggested by user: <code style="font-family: var(--font-mono);">${i.suggested_by}</code></div>` : ''}
+        </td>
+        <td>
+          ${i.short_name ? `<span class="badge-pill-inline" style="background: rgba(0, 113, 227, 0.08); color: #0071E3; font-weight: 700;">${escapeHtml(i.short_name)}</span>` : '<span style="color: var(--text-dim); font-size: 12px;">-</span>'}
+        </td>
+        <td>
+          <span class="status-pill ${i.status}">${i.status === 'pending' ? 'Pending Review' : 'Official Approved'}</span>
+        </td>
+        <td style="font-family: var(--font-mono); font-weight: 600;">
+          ${i.use_count && i.use_count > 0 ? `<span class="badge-pill-inline" style="background: rgba(16, 185, 129, 0.1); color: #059669; font-weight: 700;">${i.use_count} ${i.use_count === 1 ? 'Build' : 'Builds'}</span>` : '<span style="color: var(--text-dim); font-size: 12px;">0 Builds</span>'}
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            ${i.status === 'pending' ? `
+              <button class="btn-table-success" onclick="openApproveModal(${i.id}, '${escapeHtml(i.name)}')">Approve</button>
+            ` : ''}
+            <button class="btn-table-action" onclick="openEditInstitutionModal(${i.id}, '${escapeHtml(i.name)}', '${escapeHtml(i.short_name || '')}')">Edit</button>
+            <button class="btn-table-danger" onclick="confirmDeleteInstitution(${i.id}, '${escapeHtml(i.name)}')">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // Add / Edit Institution Modal Handlers
+  function openAddInstitutionModal() {
+    editingInstId = null;
+    document.getElementById('inst-modal-title').textContent = 'Add University';
+    document.getElementById('inst-modal-desc').textContent = 'Add an institution directly to the official autocomplete list.';
+    document.getElementById('modal-inst-name').value = '';
+    document.getElementById('modal-inst-short').value = '';
+    document.getElementById('institution-modal').classList.add('active');
+    setTimeout(() => document.getElementById('modal-inst-name').focus(), 80);
+  }
+
+  function openEditInstitutionModal(id, name, short) {
+    editingInstId = id;
+    document.getElementById('inst-modal-title').textContent = 'Edit University';
+    document.getElementById('inst-modal-desc').textContent = 'Update institution full name or abbreviation.';
+    document.getElementById('modal-inst-name').value = name;
+    document.getElementById('modal-inst-short').value = short;
+    document.getElementById('institution-modal').classList.add('active');
+    setTimeout(() => document.getElementById('modal-inst-name').focus(), 80);
+  }
+
+  function openApproveModal(id, name) {
+    editingInstId = id;
+    document.getElementById('inst-modal-title').textContent = 'Approve Suggested University';
+    document.getElementById('inst-modal-desc').textContent = 'Confirm institution name and assign an optional short acronym to add to official autocomplete.';
+    document.getElementById('modal-inst-name').value = name;
+    document.getElementById('modal-inst-short').value = '';
+    document.getElementById('institution-modal').classList.add('active');
+    setTimeout(() => document.getElementById('modal-inst-short').focus(), 80);
+  }
+
+  function closeInstitutionModal() {
+    document.getElementById('institution-modal').classList.remove('active');
+    editingInstId = null;
+  }
+
+  document.getElementById('modal-inst-save-btn').onclick = async () => {
+    const name = document.getElementById('modal-inst-name').value.trim();
+    const short_name = document.getElementById('modal-inst-short').value.trim();
+    if (!name) {
+      showToast('Please provide an institution name', 'error');
+      return;
+    }
+
+    const isEdit = editingInstId !== null;
+    const isApprove = isEdit && document.getElementById('inst-modal-title').textContent.includes('Approve');
+    
+    let url = '/api/admin/institutions/add';
+    if (isApprove) {
+      url = `/api/admin/institutions/${editingInstId}/approve`;
+    } else if (isEdit) {
+      url = `/api/admin/institutions/${editingInstId}/edit`;
+    }
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, short_name })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(data.message || 'Institution saved successfully!');
+        closeInstitutionModal();
+        await loadInstitutions();
+        await loadStats();
+      } else {
+        showToast(data.error || 'Failed to save institution', 'error');
+      }
+    } catch (e) {
+      showToast('Error saving institution', 'error');
+    }
+  };
+
+  function confirmDeleteInstitution(id, name) {
+    pendingDeleteType = 'institution';
+    pendingDeleteId = id;
+    document.getElementById('modal-title').textContent = 'Delete Institution';
+    document.getElementById('modal-text').textContent = `Are you sure you want to permanently remove "${name}" from the institutions database?`;
+    document.getElementById('confirm-modal').classList.add('active');
+  }
+
+  // Load Users Table
+  async function loadUsers() {
+    try {
+      const res = await fetch('/api/admin/users');
+      const data = await res.json();
+      if (!data.ok) return;
+      cachedUsers = data.users;
+      renderUsersTable();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function renderUsersTable() {
+    const q = document.getElementById('users-search').value.toLowerCase().trim();
+    const tbody = document.getElementById('users-table-body');
+    
+    let filtered = cachedUsers.filter(u => {
+      if (userFilter === 'admin' && u.role !== 'admin') return false;
+      if (userFilter === 'google' && u.provider !== 'google') return false;
+      if (userFilter === 'github' && u.provider !== 'github') return false;
+      if (userFilter === 'local' && u.provider !== 'local') return false;
+
+      if (q) {
+        const matchName = (u.name || '').toLowerCase().includes(q);
+        const matchEmail = (u.email || '').toLowerCase().includes(q);
+        const matchUni = (u.institution_name || '').toLowerCase().includes(q);
+        const matchTeam = (u.team_name || '').toLowerCase().includes(q);
+        if (!matchName && !matchEmail && !matchUni && !matchTeam) return false;
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-dim); padding: 24px;">No users found matching query.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(u => `
+      <tr>
+        <td>
+          <div class="user-cell">
+            <div class="user-avatar-cell" style="background: ${u.avatar_color || '#8B5CF6'};">
+              ${u.avatar_url ? `<img src="${escapeHtml(u.avatar_url)}" alt="">` : (u.name ? u.name[0].toUpperCase() : 'U')}
+            </div>
+            <div>
+              <div class="user-name-title">${escapeHtml(u.name || 'User')}</div>
+              <div class="user-id-sub">${u.id}</div>
+            </div>
+          </div>
+        </td>
+        <td style="font-family: var(--font-mono); font-size: 12.5px; color: var(--text-main);">${escapeHtml(u.email)}</td>
+        <td>
+          <div style="font-weight: 600; font-size: 12.5px;">${escapeHtml(u.institution_name || 'No institution')}</div>
+          ${u.team_name ? `<div style="font-size: 11.5px; color: #0071E3; font-weight: 500;">Team: ${escapeHtml(u.team_name)}</div>` : ''}
+        </td>
+        <td>
+          <span class="provider-badge">
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: ${u.provider === 'google' ? '#EA4335' : (u.provider === 'github' ? '#8B5CF6' : '#0071E3')};"></span>
+            ${u.provider === 'google' ? 'Google' : (u.provider === 'github' ? 'GitHub' : 'Email')}
+          </span>
+        </td>
+        <td style="font-family: var(--font-mono);">${u.snippet_count} <span style="color: var(--text-dim); font-size: 11px;">(${u.topic_count} topics)</span></td>
+        <td><span class="role-badge ${u.role}">${u.role}</span></td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn-table-action" onclick="toggleRole('${u.id}', '${u.role}')">
+              ${u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
+            </button>
+            <button class="btn-table-danger" onclick="confirmDeleteUser('${u.id}', '${escapeHtml(u.name || u.email)}')">
+              Delete
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // Toggle Admin Role
+  async function toggleRole(userId, currentRole) {
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/toggle-role`, { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Role updated to ${data.new_role.toUpperCase()}`);
+        await loadUsers();
+        await loadStats();
+      } else {
+        showToast(data.error || 'Failed to update role', 'error');
+      }
+    } catch (e) {
+      showToast('Error updating role', 'error');
+    }
+  }
+
+  // Generic Confirm Delete Modal Handler
+  let pendingDeleteType = null;
+  let pendingDeleteId = null;
+
+  function confirmDeleteUser(userId, userName) {
+    pendingDeleteType = 'user';
+    pendingDeleteId = userId;
+    document.getElementById('modal-title').textContent = 'Delete User Account';
+    document.getElementById('modal-text').textContent = `Are you sure you want to permanently delete account "${userName}"? All associated topics and snippets will be removed.`;
+    document.getElementById('confirm-modal').classList.add('active');
+  }
+
+  document.getElementById('modal-btn-cancel').onclick = () => {
+    document.getElementById('confirm-modal').classList.remove('active');
+    pendingDeleteType = null;
+    pendingDeleteId = null;
+  };
+
+  document.getElementById('modal-btn-confirm').onclick = async () => {
+    if (!pendingDeleteId) return;
+
+    if (pendingDeleteType === 'user') {
+      try {
+        const res = await fetch(`/api/admin/users/${pendingDeleteId}/delete`, { method: 'POST' });
+        const data = await res.json();
+        document.getElementById('confirm-modal').classList.remove('active');
+        if (data.ok) {
+          showToast('User account successfully deleted');
+          await loadUsers();
+          await loadStats();
+        } else {
+          showToast(data.error || 'Failed to delete user', 'error');
+        }
+      } catch (e) {
+        showToast('Error deleting user', 'error');
+      }
+    } else if (pendingDeleteType === 'institution') {
+      try {
+        const res = await fetch(`/api/admin/institutions/${pendingDeleteId}/delete`, { method: 'POST' });
+        const data = await res.json();
+        document.getElementById('confirm-modal').classList.remove('active');
+        if (data.ok) {
+          showToast('Institution removed');
+          await loadInstitutions();
+          await loadStats();
+        } else {
+          showToast(data.error || 'Failed to delete institution', 'error');
+        }
+      } catch (e) {
+        showToast('Error deleting institution', 'error');
+      }
+    }
+    pendingDeleteType = null;
+    pendingDeleteId = null;
+  };
+
+  // Load Starter Pack
+  async function loadStarterPack() {
+    try {
+      const res = await fetch('/api/admin/starter-pack');
+      const data = await res.json();
+      if (!data.ok) return;
+
+      const topicsCont = document.getElementById('starter-topics-container');
+      topicsCont.innerHTML = data.topics.map(t => `
+        <div class="starter-topic-card">
+          <span class="topic-dot-lg" style="background: ${t.color}"></span>
+          <span class="starter-topic-name">${escapeHtml(t.name)}</span>
+          <span class="starter-topic-order">Order ${t.sort_order}</span>
+        </div>
+      `).join('');
+
+      const snipsCont = document.getElementById('starter-snippets-container');
+      snipsCont.innerHTML = data.snippets.map(s => `
+        <div class="snippet-preview-card">
+          <div class="snippet-preview-header">
+            <span class="snippet-kind-tag ${s.kind || 'code'}">${s.kind || 'code'}</span>
+            <span style="font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);">${s.topic_id}</span>
+          </div>
+          <div class="snippet-title-lg">${escapeHtml(s.title)}</div>
+          <div class="snippet-subtitle-dim">${escapeHtml(s.subtitle || '')}</div>
+          ${s.complexity ? `<span class="snippet-complexity-pill">${escapeHtml(s.complexity)}</span>` : ''}
+        </div>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Load Build Logs
+  async function loadBuildLogs() {
+    try {
+      const res = await fetch('/api/admin/build-logs');
+      const data = await res.json();
+      if (!data.ok) return;
+
+      const tbody = document.getElementById('builds-table-body');
+      if (data.logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-dim);">No PDF builds recorded yet.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.logs.map(l => `
+        <tr>
+          <td style="font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);">${formatDate(l.created_at)} ${formatTime(l.created_at)}</td>
+          <td>
+            <div style="font-weight: 600;">${escapeHtml(l.user_name || 'Guest')}</div>
+            <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);">${escapeHtml(l.user_email || l.user_id)}</div>
+          </td>
+          <td>
+            <div style="font-weight: 600; font-size: 12.5px;">${escapeHtml(l.institution_name || 'None')}</div>
+            ${l.team_name ? `<div style="font-size: 11.5px; color: #0071E3;">Team: ${escapeHtml(l.team_name)}</div>` : ''}
+          </td>
+          <td><span class="badge-pill-inline" style="background: ${l.engine === 'chrome' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)'}; color: ${l.engine === 'chrome' ? '#059669' : '#D97706'}; font-weight: 700;">${l.engine}</span></td>
+          <td style="font-family: var(--font-mono); font-weight: 700;">${l.page_count} p</td>
+          <td style="font-family: var(--font-mono);">${l.render_duration_ms} ms</td>
+          <td><span class="status-pill ${l.status}">${l.status}</span></td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Maintenance Handlers
+  document.getElementById('btn-clear-cache').onclick = async () => {
+    try {
+      const res = await fetch('/api/admin/maintenance/clear-cache', { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Cache purged: ${data.freed_formatted} freed (${data.deleted_files} files)`);
+        await loadStats();
+      } else {
+        showToast('Failed to purge cache', 'error');
+      }
+    } catch (e) {
+      showToast('Error purging cache', 'error');
+    }
+  };
+
+  document.getElementById('btn-purge-trash').onclick = async () => {
+    try {
+      const res = await fetch('/api/admin/maintenance/purge-trash', { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Trash purged: ${data.purged_snippets} snippets, ${data.purged_topics} topics`);
+        await loadStats();
+      } else {
+        showToast('Failed to purge trash', 'error');
+      }
+    } catch (e) {
+      showToast('Error purging trash', 'error');
+    }
+  };
+
+  // Search Listeners
+  document.getElementById('users-search').addEventListener('input', renderUsersTable);
+  document.getElementById('institutions-search').addEventListener('input', renderInstitutionsTable);
+  document.getElementById('btn-refresh-data').addEventListener('click', async () => {
+    await loadStats();
+    await loadInstitutions();
+    await loadUsers();
+    showToast('Dashboard data refreshed');
+  });
+
+  document.querySelectorAll('.filter-pills .filter-pill').forEach(btn => {
+    if (btn.dataset.filter) {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#tab-users .filter-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        userFilter = btn.dataset.filter;
+        renderUsersTable();
+      });
+    }
+  });
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // Initial Boot
+  window.addEventListener('DOMContentLoaded', () => {
+    loadStats();
+    loadInstitutions();
+  });
+</script>
+</body>
+</html>

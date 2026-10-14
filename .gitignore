@@ -1,0 +1,22 @@
+# Environment variables & secrets
+.env
+*.env
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Output and runtime files
+output/*.pdf
+output/*.html
+debug_layout.log
+
+# Database files
+backend/data/*.db
+*.db

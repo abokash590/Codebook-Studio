@@ -1,4 +1,4 @@
-# Codebook Builder (live-preview editor)
+# Codebook Studio (live-preview editor)
 
 A local web app for building your ICPC-style contest codebook. Edit
 everything from a sidebar on the left; the actual A4 page updates live
@@ -45,9 +45,7 @@ see the format before adding your own.
   a brand new topic.
 - **Middle**: the actual A4 pages of your codebook — cover page, quick
   index, then one page per topic — updating live as you edit.
-- **Build PDF**: generates the real print-ready `codebook.pdf`. Check
-  "Leave out unverified templates" first if you don't want anything
-  untested in the printed version.
+- **Build PDF**: generates the real print-ready `codebook.pdf`.
 - **Download PDF**: grabs the most recently built PDF.
 
 Nothing requires editing code or files by hand — everything is done

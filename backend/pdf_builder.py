@@ -16,7 +16,10 @@ try:
     from weasyprint.text.fonts import FontConfiguration
 except ImportError:
     from weasyprint.fonts import FontConfiguration
-from db import get_db
+try:
+    from backend.db import get_db
+except ImportError:
+    from db import get_db
 
 # Reused across every build instead of created fresh each time -- WeasyPrint
 # has to parse and register all the embedded @font-face fonts (JetBrains
@@ -26,13 +29,20 @@ from db import get_db
 # that cost; every build after that skips straight to page layout.
 _FONT_CONFIG = FontConfiguration()
 
-OUTPUT_DIR = Path(__file__).parent / "output"
-FONTS_DIR = Path(__file__).parent / "static" / "fonts"
-STATIC_DIR = Path(__file__).parent / "static"
+BASE_DIR = Path(__file__).resolve().parent.parent
+OUTPUT_DIR = BASE_DIR / "output"
+STATIC_DIR = BASE_DIR / "frontend" / "static"
+FONTS_DIR = STATIC_DIR / "fonts"
 
 
 def _find_chrome() -> str | None:
     """Return the path to a Chrome/Chromium executable, or None if not found."""
+    # 0. Check explicit environment variable
+    import os
+    env_bin = os.environ.get("CHROME_BIN") or os.environ.get("CHROMIUM_PATH")
+    if env_bin and Path(env_bin).exists():
+        return env_bin
+
     # 1. Common explicit Windows paths
     candidates = [
         r"C:\Program Files\Google\Chrome\Application\chrome.exe",
@@ -51,7 +61,7 @@ def _find_chrome() -> str | None:
     return None
 
 
-def build_pdf_from_html(html_content: str) -> Path:
+def build_pdf_from_html(html_content: str, output_path: Path | None = None) -> Path:
     """Render html_content to PDF using Chrome headless.
 
     Chrome uses the exact same Blink rendering engine as the live preview, so
@@ -64,11 +74,69 @@ def build_pdf_from_html(html_content: str) -> Path:
         )
 
     OUTPUT_DIR.mkdir(exist_ok=True)
-    pdf_path = OUTPUT_DIR / "codebook.pdf"
+    pdf_path = output_path if output_path is not None else (OUTPUT_DIR / "codebook.pdf")
+
+    # Enforce multi-page printing rules so Chrome headless never clips pages to a single viewport height
+    pagination_fix_css = """
+    <style id="chrome-headless-pagination-fix">
+      @page {
+        size: 210mm 297mm;
+        margin: 0;
+      }
+      @media print, all {
+        html, body {
+          background: white !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          height: auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          overflow: visible !important;
+          position: static !important;
+        }
+        .app, .preview-area, .preview-scroll {
+          display: block !important;
+          background: transparent !important;
+          overflow: visible !important;
+          height: auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          width: auto !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          position: static !important;
+        }
+        .a4-page {
+          width: 210mm !important;
+          min-height: 297mm !important;
+          height: 297mm !important;
+          margin: 0 !important;
+          padding: 14mm !important;
+          box-shadow: none !important;
+          border-radius: 0 !important;
+          page-break-after: always !important;
+          break-after: page !important;
+          overflow: hidden !important;
+          position: relative !important;
+        }
+        .a4-page:last-child {
+          page-break-after: avoid !important;
+          break-after: avoid !important;
+        }
+        .craft-navbar, .sidebar, .thumbnails-rail, .sidebar-toggle-btn, .rail-toggle-btn, .modal-backdrop, .color-popover, .canvas-dock, .card-hover-launcher, .hover-launcher-left, .hover-launcher-right {
+          display: none !important;
+        }
+      }
+    </style>
+    """
+    if "</head>" in html_content:
+        prepared_html = html_content.replace("</head>", f"{pagination_fix_css}\n</head>")
+    else:
+        prepared_html = f"{pagination_fix_css}\n{html_content}"
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         html_path = Path(tmp_dir) / "preview.html"
-        html_path.write_text(html_content, encoding="utf-8")
+        html_path.write_text(prepared_html, encoding="utf-8")
 
         result = subprocess.run(
             [
@@ -99,6 +167,7 @@ def build_pdf_from_html(html_content: str) -> Path:
 # ---- Fonts available for the code blocks (family name -> file basenames) ----
 CODE_FONT_FILES = {
     "JetBrains Mono": ("JetBrainsMono-Regular.ttf", "JetBrainsMono-Bold.ttf"),
+    "Fira Code": ("FiraCode-Regular.ttf", "FiraCode-Bold.ttf"),
     "IBM Plex Mono": ("IBMPlexMono-Regular.ttf", "IBMPlexMono-Bold.ttf"),
     "Space Mono": ("SpaceMono-Regular.ttf", "SpaceMono-Bold.ttf"),
 }
@@ -289,7 +358,7 @@ COVER_STYLES = ["minimal", "sketch", "banner", "frame", "terminal", "geometric"]
 DEFAULT_COVER_STYLE = "minimal"
 
 
-def _cover_html(style: str, book_title: str, team_name: str, institution_name: str) -> str:
+def _cover_html(style: str, book_title: str, team_name: str, institution_name: str, accent_color: str = "currentColor") -> str:
     """Five deliberately distinct cover-page layouts, picked in Settings.
     Each returns its own markup (not just a CSS reskin of one template) so
     they read as genuinely different books, not the same page recolored."""
@@ -298,18 +367,15 @@ def _cover_html(style: str, book_title: str, team_name: str, institution_name: s
     team = escape_html(team_name)
     inst = escape_html(institution_name)
     inst_html = f'<p class="cover-inst">{inst}</p>' if inst else ""
+    team_html = f'<p class="cover-team">{team}</p>' if team else ""
 
     if style == "sketch":
         inst_block = f'<p class="cover-sketch-inst">{inst}</p>' if inst else ""
+        team_block = f'<div class="cover-sketch-team-pill">{team}</div>' if team else ""
         return f"""
         <section class="cover cover-sketch-page" id="cover-page-anchor">
-          <div class="cover-sketch">
-            <svg class="cover-sketch-border" viewBox="0 0 520 740" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-              <path d="M18,12 Q130,8 260,10 T502,14 Q506,180 504,370 T500,726 Q380,730 260,728 T18,724 Q14,560 16,370 T18,12 Z"
-                fill="none" stroke="{accent_color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
-              <path d="M28,22 Q140,19 260,21 T492,25 Q495,185 493,370 T490,716 Q375,719 260,717 T28,714 Q25,555 27,370 T28,22 Z"
-                fill="none" stroke="{accent_color}" stroke-width="0.8" stroke-linecap="round" opacity="0.25"/>
-            </svg>
+          <div class="cover-sketch-inner">
+            <div class="cover-sketch-border"></div>
             <div class="cover-sketch-doodles" aria-hidden="true">
               <span class="csd csd-1">{{</span>
               <span class="csd csd-2">}}</span>
@@ -326,18 +392,21 @@ def _cover_html(style: str, book_title: str, team_name: str, institution_name: s
             </div>
             <div class="cover-sketch-body">
               <div class="cover-sketch-eyebrow">
-                <span>Contest Notebook</span>
+                <span>VOL. I</span>
+                <span class="cover-sketch-eyebrow-sep">•</span>
+                <span>ALGORITHMIC COMPENDIUM</span>
               </div>
               <h1 class="cover-sketch-title">{title}</h1>
-              <div class="cover-sketch-rule"></div>
+              <div class="cover-sketch-rule-row">
+                <span class="csk-line"></span>
+                <span class="csk-diamond">◆</span>
+                <span class="csk-line"></span>
+              </div>
               <div class="cover-sketch-meta">
                 {inst_block}
-                <p class="cover-sketch-team">{team}</p>
+                {team_block}
               </div>
-              <svg class="cover-sketch-bracket" width="40" height="28" viewBox="0 0 40 28" fill="none" stroke="{accent_color}" stroke-width="1.5" stroke-linecap="round">
-                <path d="M12,4 Q8,4 7,8 T7,20 Q7,24 12,24"/>
-                <path d="M28,4 Q32,4 33,8 T33,20 Q33,24 28,24"/>
-              </svg>
+              <div class="cover-sketch-footer">COMPILED FOR ICPC CONTEST REFERENCE</div>
             </div>
           </div>
         </section>
@@ -350,7 +419,7 @@ def _cover_html(style: str, book_title: str, team_name: str, institution_name: s
             {inst_html}
             <div class="cover-banner-rule"></div>
             <h1>{title}</h1>
-            <p class="cover-team">{team}</p>
+            {team_html}
           </div>
         </section>
         """
@@ -363,29 +432,36 @@ def _cover_html(style: str, book_title: str, team_name: str, institution_name: s
             <div class="cover-frame-rule"></div>
             <h1>{title}</h1>
             <div class="cover-frame-rule"></div>
-            <p class="cover-team">{team}</p>
+            {team_html}
           </div>
         </section>
         """
 
     if style == "terminal":
-        rows = ""
-        if inst:
-            rows += f'<p class="cover-term-line"><span class="cover-term-prompt-sym">$</span> cat institution.txt</p><p class="cover-term-line cover-term-out">{inst}</p>'
-        rows += f'<p class="cover-term-line"><span class="cover-term-prompt-sym">$</span> whoami</p><p class="cover-term-line cover-term-out">{team}</p>'
+        inst_block = f"""<div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cmd">cat /etc/institution</span></div>
+        <div class="cover-term-out cover-term-inst-out term-inst-out">{inst}</div>""" if inst else ""
+        team_block = f"""<div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cmd">whoami</span></div>
+              <div class="cover-term-out cover-term-team-out term-team-out">{team}</div>""" if team else ""
         return f"""
         <section class="cover cover-terminal" id="cover-page-anchor">
           <div class="cover-term-window">
             <div class="cover-term-titlebar">
-              <span class="cover-term-btn"></span>
-              <span class="cover-term-btn"></span>
-              <span class="cover-term-btn"></span>
+              <div class="cover-term-traffic">
+                <span class="cover-term-btn cover-term-btn-red"></span>
+                <span class="cover-term-btn cover-term-btn-yellow"></span>
+                <span class="cover-term-btn cover-term-btn-green"></span>
+              </div>
+              <span class="cover-term-tab">bash — 80×24 — contest-codebook</span>
+              <span class="cover-term-session">[UTF-8]</span>
             </div>
             <div class="cover-term-body">
-              <p class="cover-term-line"><span class="cover-term-prompt-sym">$</span> cat title.txt</p>
-              <p class="cover-term-line cover-term-out cover-term-title-out">{title}</p>
-              {rows}
-              <p class="cover-term-line"><span class="cover-term-prompt-sym">$</span> <span class="cover-term-cursor">&#9608;</span></p>
+              <div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cmd">cat /etc/codebook/title</span></div>
+              <div class="cover-term-out cover-term-title-highlight">{title}</div>
+              {inst_block}
+              {team_block}
+              <div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cmd">./verify_build.sh --strict</span></div>
+              <div class="cover-term-out cover-term-success"><span>✔</span> 100% algorithms verified • 0 warnings • Ready for contest</div>
+              <div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cursor">█</span></div>
             </div>
           </div>
         </section>
@@ -399,23 +475,45 @@ def _cover_html(style: str, book_title: str, team_name: str, institution_name: s
             {inst_html}
             <h1>{title}</h1>
             <div class="cover-geo-rule"></div>
-            <p class="cover-team">{team}</p>
+            {team_html}
           </div>
         </section>
         """
 
-    # "minimal" (default / fallback for unrecognized values)
+    # "minimal" (default / fallback)
+    inst_block = f'<div class="cover-min-inst">{inst}</div>' if inst else ""
+    team_block = f'<div class="cover-min-team">{team}</div>' if team else ""
     return f"""
     <section class="cover cover-minimal" id="cover-page-anchor">
-      {inst_html}
-      <h1>{title}</h1>
-      <p class="cover-team">{team}</p>
-      <div class="cover-minimal-rule"></div>
+      <div class="cover-min-inner">
+        <div class="cover-min-header">
+          <div class="cover-min-badge">
+            <span class="cover-min-badge-dot"></span>
+            <span>OFFICIAL REFERENCE MANUAL</span>
+          </div>
+          <span class="cover-min-serial">ICPC-STD // 2026</span>
+        </div>
+        <div class="cover-min-body">
+          <h1 class="cover-min-title">{title}</h1>
+          <div class="cover-min-rule-wrap">
+            <div class="cover-min-rule"></div>
+            <span class="cover-min-coord">BUILD SEC. 01</span>
+          </div>
+          <div class="cover-min-meta">
+            {inst_block}
+            {team_block}
+          </div>
+        </div>
+        <div class="cover-min-footer">
+          <span>COMPETITIVE PROGRAMMING REFERENCE</span>
+          <span>VERIFIED COMPILATION</span>
+        </div>
+      </div>
     </section>
     """
 
 
-def build_css(code_font, page_size, accent_color, institution_name, team_name, show_header):
+def build_css(code_font, page_size, accent_color, institution_name, team_name, show_header, template_accent_color="#0071E3"):
     resolved_family = code_font if code_font in CODE_FONT_FILES else DEFAULT_CODE_FONT
     page_size_css = PAGE_SIZE_CSS.get(page_size, PAGE_SIZE_CSS[DEFAULT_PAGE_SIZE])
     font_faces = build_font_faces_css(code_font)
@@ -475,7 +573,7 @@ body {{ font-family: 'Inter', sans-serif; color: #2C2C2A; margin: 0; }}
 .csd-12 {{ top: 92%; left: 52%; font-size: 11px; transform: rotate(-2deg); opacity: 0.07; }}
 .cover-sketch-body {{ position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 140mm; }}
 .cover-sketch-eyebrow {{ display: flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.8px; text-transform: uppercase; color: {accent_color}; opacity: 0.6; margin-bottom: 10mm; }}
-.cover-sketch-title {{ font-family: 'Kalam', cursive; font-size: 34px; font-weight: 700; line-height: 1.15; color: #2C2C2A; margin: 0 0 7mm; letter-spacing: -0.5px; }}
+.cover-sketch-title {{ font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif; font-size: 36px; font-weight: 600; line-height: 1.15; color: #030302; margin: 0 0 7mm; letter-spacing: -0.03em; }}
 .cover-sketch-rule {{ width: 48mm; height: 4px; background: {accent_color}; margin: 0 auto 8mm; }}
 .cover-sketch-meta {{ display: flex; flex-direction: column; gap: 3px; margin-bottom: 8mm; }}
 .cover-sketch-inst {{ font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: {accent_color}; margin: 0; opacity: 0.85; }}
@@ -592,18 +690,6 @@ body {{ font-family: 'Inter', sans-serif; color: #2C2C2A; margin: 0; }}
   margin-bottom: 4mm;
   position: relative;
 }}
-/* Tape corners */
-.card::before, .card::after {{
-  content: "";
-  position: absolute;
-  top: -2.5mm;
-  width: 9mm; height: 3.5mm;
-  background: rgba(214, 196, 120, 0.5);
-  border-radius: 1px;
-}}
-.card::before {{ left: 8mm; transform: rotate(-6deg); }}
-.card::after  {{ right: 8mm; transform: rotate(5deg); }}
-.card.unverified {{ border-style: dashed; }}
 .card-head {{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }}
 .card-title {{ font-size: 13px; font-weight: 600; }}
 .card-complexity {{ font-size: 10.5px; color: #888780; font-family: '{resolved_family}', monospace; }}
@@ -643,11 +729,210 @@ body {{
   background-size: 3px 3px;
   background-color: #ffffff;
 }}
+
+/* ================= SNIPPET CARD THEMES (Craft, IDE Window, Academic) ================= */
+.card-theme-craft.card {{
+  border: 0.5px solid #CBD5E1;
+  border-left: 3.5px solid;
+  border-radius: 8px;
+  background: #FFFFFF;
+}}
+.card-theme-craft .card-head {{
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;
+}}
+.card-theme-craft .card-title-row {{
+  display: flex; align-items: center; gap: 4px;
+}}
+.card-theme-craft .card-title-dot {{
+  display: inline-block; width: 5px; height: 5px; border-radius: 50%; margin-right: 4px; vertical-align: middle;
+}}
+.card-theme-craft .card-complexity {{
+  font-size: 9.5px; font-weight: 600; color: #475569; background: #F1F5F9; border: 0.5px solid #CBD5E1; padding: 1px 6px; border-radius: 999px;
+}}
+.card-theme-craft .card-notes {{
+  background: #F8FAFC; border-left: 2px solid #CBD5E1; padding: 3px 6px; border-radius: 0 4px 4px 0; margin-bottom: 5px; font-size: 10px;
+}}
+
+.card-theme-ide.card {{
+  border: 0.5px solid #D4D4D8;
+  border-left: 0.5px solid #D4D4D8 !important;
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 0 !important;
+}}
+.card-theme-ide .card-windowbar {{
+  background: #F4F4F5; border-bottom: 0.5px solid #D4D4D8; padding: 2mm 2.5mm; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;
+}}
+.card-theme-ide .card-window-controls {{
+  display: inline-flex; align-items: center; gap: 3px; min-width: 35px; flex-shrink: 0;
+}}
+.card-theme-ide .card-window-dot {{
+  display: inline-block; width: 4.5px; height: 4.5px; border-radius: 50%;
+}}
+.card-theme-ide .card-window-filetab {{
+  font-family: '{resolved_family}', monospace; font-size: 9px; font-weight: 600; color: #18181B; background: #FFFFFF; border: 0.5px solid #D4D4D8; padding: 1px 6px; border-radius: 3px; text-align: center; margin: 0 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%;
+}}
+.card-theme-ide .card-complexity {{
+  font-size: 8.5px; font-weight: 700; color: #FFFFFF; background: #18181B; padding: 1px 5px; border-radius: 3px; min-width: 35px; text-align: right; white-space: nowrap; flex-shrink: 0;
+}}
+.card-theme-ide .card-window-spacer {{
+  display: inline-block; min-width: 35px; flex-shrink: 0;
+}}
+.card-theme-ide .card-inner-body {{
+  padding: 2.5mm 3mm;
+}}
+.card-theme-ide .card-notes {{
+  background: #FAFAFA; border-left: 2px solid #7C3AED; padding: 3px 6px; margin-bottom: 5px; font-size: 10px;
+}}
+.card-theme-ide .card-code {{
+  background: #FAF9F6; border: 0.5px solid #E4E4E7;
+}}
+
+.card-theme-academic.card {{
+  border: 1px solid #1C1917;
+  border-left: 1px solid #1C1917 !important;
+  border-radius: 3px;
+  padding: 2.5mm 3mm;
+}}
+.card-theme-academic .card-academic-topbar {{
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;
+}}
+.card-theme-academic .card-category-tag {{
+  font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #78716C;
+}}
+.card-theme-academic .card-complexity {{
+  font-size: 9.5px; font-weight: 700; color: #1C1917;
+}}
+.card-theme-academic .card-title {{
+  display: block; font-size: 12px; font-weight: 800; color: #0C0A09; padding-bottom: 2px; border-bottom: 0.5px solid #E7E5E4; margin-bottom: 3px;
+}}
+.card-theme-academic .card-notes {{
+  font-size: 9.5px; line-height: 1.35; color: #44403C; margin-bottom: 4px;
+}}
+.card-theme-academic .card-code {{
+  background: #F5F5F4; border: 0.5px solid #D6D3D1; border-radius: 2px; font-size: 9.5px; line-height: 1.36;
+}}
+
+/* Note Cards Styling across all 3 themes */
+.card-theme-craft .card-note .card-note-body,
+.card-theme-craft.card-note .card-note-body {{
+  background: #F8FAFC; border: 0.5px solid #E2E8F0; border-radius: 6px; padding: 5px 8px; font-size: 10px; line-height: 1.48; color: #334155; margin-top: 4px;
+}}
+.card-theme-ide .card-note.card,
+.card-theme-ide.card-note {{
+  padding: 0 !important; border: 0.5px solid #D4D4D8; border-radius: 8px; overflow: hidden;
+}}
+.card-theme-ide .card-note .card-note-body,
+.card-theme-ide.card-note .card-note-body {{
+  background: #FAF9F6; border: 0.5px solid #E4E4E7; border-radius: 5px; padding: 5px 7px; font-size: 9.5px; line-height: 1.45; color: #27272A; margin-top: 4px;
+}}
+.card-theme-academic .card-note.card,
+.card-theme-academic.card-note {{
+  border: 1px solid #1C1917; border-radius: 3px; padding: 2.5mm 3mm;
+}}
+.card-theme-academic .card-note .card-note-body,
+.card-theme-academic.card-note .card-note-body {{
+  background: #F5F5F4; border: 0.5px solid #D6D3D1; border-radius: 2px; padding: 4px 7px; font-size: 9px; line-height: 1.38; color: #1C1917; margin-top: 3px;
+}}
+
+.card-theme-ide .card-title {{
+  font-size: 12.5px; font-weight: 700; color: #18181B; margin-bottom: 3px; display: block;
+}}
+.card-theme-craft .card-title {{
+  font-size: 13px; font-weight: 700; color: #0F172A;
+}}
+
+/* Template Cards across all 3 themes */
+.boilerplate-page {{ page-break-before: always; }}
+.card-theme-craft.card-template, .card-theme-craft .card-template {{
+  border: 0.5px solid #CBD5E1; border-left: 3.5px solid {template_accent_color} !important; border-radius: 8px; background: #FFFFFF; overflow: hidden; padding: 0 !important;
+}}
+.card-theme-craft .template-card-header {{
+  background: #F8FAFC; border-bottom: 0.5px solid #CBD5E1; padding: 2.5mm 3mm; display: flex; justify-content: space-between; align-items: center;
+}}
+.card-theme-craft .tmpl-pill {{ font-size: 11px; font-weight: 700; color: #0F172A; }}
+.card-theme-craft .tmpl-tag {{ font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: #E0F2FE; color: #0284C7; }}
+.card-theme-craft.card-template .card-code, .card-theme-craft .card-template .card-code {{
+  background: #FFFFFF !important; border: none; border-radius: 0; padding: 3mm 4mm;
+}}
+
+.card-theme-ide.card-template, .card-theme-ide .card-template {{
+  border: 0.5px solid #D4D4D8; border-radius: 8px; overflow: hidden; background: #FFFFFF; padding: 0 !important;
+}}
+.card-theme-ide .template-card-header {{
+  background: #18181B; color: #FFFFFF; padding: 2.5mm 3mm; display: flex; justify-content: space-between; align-items: center;
+}}
+.card-theme-ide .tmpl-pill {{ font-family: '{resolved_family}', monospace; font-size: 10px; font-weight: 600; color: #FFFFFF; display: flex; align-items: center; gap: 4px; }}
+.card-theme-ide .tmpl-tag {{ font-size: 8.5px; color: #A1A1AA; border: 0.5px solid rgba(255,255,255,0.3); padding: 1px 4px; border-radius: 2px; }}
+.card-theme-ide.card-template .card-code, .card-theme-ide .card-template .card-code {{
+  background: #FAF9F6 !important; border: none; border-radius: 0; padding: 3mm 4mm;
+}}
+
+.card-theme-academic.card-template, .card-theme-academic .card-template {{
+  border: 1px solid #1C1917; border-radius: 3px; padding: 2.5mm 3mm !important; background: #FFFFFF;
+}}
+.card-theme-academic .template-card-header {{
+  display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #1C1917; padding-bottom: 2px; margin-bottom: 3mm;
+}}
+.card-theme-academic .tmpl-pill {{ font-size: 11px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; color: #1C1917; }}
+.card-theme-academic .tmpl-tag {{ font-family: '{resolved_family}', monospace; font-size: 8.5px; color: #57534E; font-weight: 600; }}
+.card-theme-academic.card-template .card-code, .card-theme-academic .card-template .card-code {{
+  background: #F5F5F4 !important; border: 0.5px solid #D6D3D1; border-radius: 2px; padding: 2.5mm 3mm;
+}}
 """
 
 
 def escape_html(s: str) -> str:
     return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+# Computes a clean file slug for IDE card window bar:
+# - If title length <= max_len (default 12), use the full sanitized slug.
+# - If title length > max_len, construct an acronym from the first character of each word.
+def get_snippet_file_slug(title: str, max_len: int = 12) -> str:
+    clean = (title or "").strip()
+    if not clean:
+        return "snippet"
+    full_slug = re.sub(r"[^a-z0-9]+", "_", clean.lower()).strip("_")
+    if not full_slug:
+        return "snippet"
+    if len(full_slug) <= max_len:
+        return full_slug
+    split_words = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", clean)
+    words = [re.sub(r"[^a-zA-Z0-9]", "", w) for w in re.split(r"[\s_\-]+", split_words)]
+    words = [w for w in words if w]
+    if len(words) > 1:
+        acronym = "".join(w[0].lower() for w in words)
+        if acronym:
+            return acronym
+    return full_slug[:10]
+
+
+# Maps languages to canonical file extensions for IDE window tabs (e.g. python -> py, c++ -> cpp, kotlin -> kt)
+def get_lang_ext(lang: str) -> str:
+    l = (lang or "").lower().strip()
+    ext_map = {
+        "c++": "cpp",
+        "cpp": "cpp",
+        "c": "c",
+        "python": "py",
+        "py": "py",
+        "java": "java",
+        "kotlin": "kt",
+        "kt": "kt",
+        "rust": "rs",
+        "rs": "rs",
+        "go": "go",
+        "golang": "go",
+        "javascript": "js",
+        "js": "js",
+        "typescript": "ts",
+        "ts": "ts",
+        "text": "txt",
+        "markdown": "md",
+        "md": "md",
+    }
+    return ext_map.get(l, re.sub(r"[^a-z0-9]", "", l) or "cpp")
 
 
 # ---- Minimal markdown for note cards (P1-extension) -- deliberately tiny:
@@ -699,40 +984,125 @@ def _formulas_html(s, standalone: bool = False) -> str:
     return f'<div class="{wrap_class}">{"".join(parts)}</div>'
 
 
-def _card_html(s, topic_color: str, font_size: float) -> str:
+def _card_html(s, topic_color: str, font_size: float, card_style: str = "craft", topic_name: str = "") -> str:
     kind = s["kind"] if "kind" in s.keys() else "code"
     title_html = f'<span class="card-title">{escape_html(s["title"])}</span>'
-    subtitle_html = f'<p class="card-subtitle">{escape_html(s["subtitle"])}</p>' if s["subtitle"] else ""
 
     if kind == "note":
-        return f"""
-        <div class="card card-note" style="border-left-color:{topic_color}">
-          <div class="card-head">{title_html}</div>
-          {subtitle_html}
-          <div class="card-note-body">{markdown_lite_html(s["notes"])}</div>
-        </div>
-        """
+        note_body_html = f'<div class="card-note-body">{markdown_lite_html(s["notes"])}</div>'
+        if card_style == "ide":
+            title_str = s["title"] if "title" in s.keys() else "note"
+            slug = get_snippet_file_slug(title_str, 12)
+            return f"""
+            <div class="card card-note card-theme-ide">
+              <div class="card-windowbar">
+                <span class="card-window-controls">
+                  <span class="card-window-dot" style="background:#EF4444"></span>
+                  <span class="card-window-dot" style="background:#F59E0B"></span>
+                  <span class="card-window-dot" style="background:#10B981"></span>
+                </span>
+                <span class="card-window-filetab">{slug}.md</span>
+                <span class="card-complexity">NOTE</span>
+              </div>
+              <div class="card-inner-body">
+                <div class="card-title">{escape_html(s['title'])}</div>
+                {note_body_html}
+              </div>
+            </div>
+            """
+        elif card_style == "academic":
+            return f"""
+            <div class="card card-note card-theme-academic">
+              <div class="card-academic-topbar">
+                <span class="card-category-tag">{escape_html(topic_name).upper()} // NOTE</span>
+                <span class="card-complexity">OBSERVATION</span>
+              </div>
+              <div class="card-title">{escape_html(s['title'])}</div>
+              {note_body_html}
+            </div>
+            """
+        else: # craft
+            dot_html = f'<span class="card-title-dot" style="background:{topic_color}"></span>'
+            note_badge = '<span class="card-complexity">⏱ NOTE</span>'
+            return f"""
+            <div class="card card-note card-theme-craft" style="border-left-color:{topic_color}">
+              <div class="card-head">
+                <div class="card-title-row">
+                  {dot_html}
+                  <div class="card-title">{escape_html(s['title'])}</div>
+                </div>
+                {note_badge}
+              </div>
+              {note_body_html}
+            </div>
+            """
 
     if kind == "formula":
         return f"""
-        <div class="card card-formula-card" style="border-left-color:{topic_color}">
-          <div class="card-head">{title_html}</div>
-          {subtitle_html}
+        <div class="card card-formula-card card-theme-{card_style}" style="border-left-color:{topic_color}">
+          <div class="card-head"><div class="card-title">{escape_html(s['title'])}</div></div>
           {_formulas_html(s, standalone=True)}
         </div>
         """
 
     # kind == "code" (default, and fallback for any unrecognized value)
-    verified_class = "" if s["verified"] else " unverified"
     notes_html = f'<p class="card-notes">{escape_html(s["notes"])}</p>' if s["notes"] else ""
     language = s["language"] if "language" in s.keys() else DEFAULT_LANGUAGE
+    raw_comp = s["complexity"] if "complexity" in s.keys() else ""
+    complexity = escape_html(raw_comp or "")
+
+    if card_style == "ide":
+        title_str = s["title"] if "title" in s.keys() else "snippet"
+        slug = get_snippet_file_slug(title_str, 12)
+        ext = get_lang_ext(language)
+        comp_pill = f'<span class="card-complexity">{complexity}</span>' if complexity else '<span class="card-window-spacer"></span>'
+        return f"""
+        <div class="card card-theme-ide">
+          <div class="card-windowbar">
+            <span class="card-window-controls">
+              <span class="card-window-dot" style="background:#EF4444"></span>
+              <span class="card-window-dot" style="background:#F59E0B"></span>
+              <span class="card-window-dot" style="background:#10B981"></span>
+            </span>
+            <span class="card-window-filetab">{slug}.{ext}</span>
+            {comp_pill}
+          </div>
+          <div class="card-inner-body">
+            <div class="card-title">{escape_html(s['title'])}</div>
+            {notes_html}
+            {_formulas_html(s)}
+            <pre class="card-code" style="font-size:{font_size}px">{highlight_code_html(s['code'], language)}</pre>
+          </div>
+        </div>
+        """
+
+    if card_style == "academic":
+        comp_span = f'<span class="card-complexity">{complexity}</span>' if complexity else ''
+        return f"""
+        <div class="card card-theme-academic">
+          <div class="card-academic-topbar">
+            <span class="card-category-tag">{escape_html(topic_name).upper()}</span>
+            {comp_span}
+          </div>
+          <div class="card-title">{escape_html(s['title'])}</div>
+          {notes_html}
+          {_formulas_html(s)}
+          <pre class="card-code" style="font-size:{font_size}px">{highlight_code_html(s['code'], language)}</pre>
+        </div>
+        """
+
+    # card_style == "craft" (default)
+    dot_html = f'<span class="card-title-dot" style="background:{topic_color}"></span>'
+    comp_html = f'<span class="card-complexity">⏱ {complexity}</span>' if complexity else ''
     return f"""
-    <div class="card{verified_class}" style="border-left-color:{topic_color}">
+    <div class="card card-theme-craft" style="border-left-color:{topic_color}">
       <div class="card-head">
-        {title_html}
-        <span class="card-complexity">{escape_html(s['complexity'])}</span>
+        <div class="card-title-row">
+          {dot_html}
+          <div class="card-title">{escape_html(s['title'])}</div>
+        </div>
+        {comp_html}
       </div>
-      {subtitle_html}
       {notes_html}
       {_formulas_html(s)}
       <pre class="card-code" style="font-size:{font_size}px">{highlight_code_html(s['code'], language)}</pre>
@@ -740,7 +1110,48 @@ def _card_html(s, topic_color: str, font_size: float) -> str:
     """
 
 
-def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = None) -> Path:
+def _template_card_html(label: str, chunk_text: str, font_size: float, card_style: str = "craft", template_accent: str = "#0071E3") -> str:
+    if card_style == "ide":
+        return f"""
+        <div class="card card-template card-theme-ide">
+          <div class="card-windowbar template-card-header">
+            <span class="card-window-controls">
+              <span class="card-window-dot" style="background:#EF4444"></span>
+              <span class="card-window-dot" style="background:#F59E0B"></span>
+              <span class="card-window-dot" style="background:#10B981"></span>
+            </span>
+            <span class="card-window-filetab">template.cpp &bull; {escape_html(label)}</span>
+            <span class="tmpl-tag">SETUP BUFFER</span>
+          </div>
+          <pre class="card-code" style="font-size:{font_size}px">{highlight_code_html(chunk_text, DEFAULT_LANGUAGE)}</pre>
+        </div>
+        """
+    elif card_style == "academic":
+        return f"""
+        <div class="card card-template card-theme-academic">
+          <div class="template-card-header">
+            <span class="tmpl-pill">CONTEST SETUP SPECIFICATION &mdash; {escape_html(label).upper()}</span>
+            <span class="tmpl-tag">// BOILERPLATE SETUP</span>
+          </div>
+          <pre class="card-code" style="font-size:{font_size}px">{highlight_code_html(chunk_text, DEFAULT_LANGUAGE)}</pre>
+        </div>
+        """
+    else:  # craft
+        return f"""
+        <div class="card card-template card-theme-craft" style="border-left-color:{template_accent}">
+          <div class="template-card-header">
+            <div class="tmpl-pill">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="{template_accent}" stroke-width="2.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              <span>{escape_html(label)}</span>
+            </div>
+            <span class="tmpl-tag" style="background:{template_accent}; color:#FFFFFF;">C++ SETUP</span>
+          </div>
+          <pre class="card-code" style="font-size:{font_size}px">{highlight_code_html(chunk_text, DEFAULT_LANGUAGE)}</pre>
+        </div>
+        """
+
+
+def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = None, user_id: str = "guest", output_path: Path | None = None) -> Path:
     """Renders the codebook PDF.
 
     `layout`, when provided, is the exact page-by-page breakdown the browser
@@ -755,39 +1166,37 @@ def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = N
     topic as one continuous multi-column flow, same as before.
     """
     conn = get_db()
-    topics = conn.execute("SELECT * FROM topics WHERE deleted_at IS NULL ORDER BY sort_order").fetchall()
-    settings = {r["key"]: r["value"] for r in conn.execute("SELECT * FROM settings")}
-    team_name = settings.get("team_name") or "MEC_ALGO_SCHOLARS"
-    institution_name = settings.get("institution_name") or "Mymensingh Engineering College"
+    topics = conn.execute("SELECT * FROM topics WHERE user_id=? AND deleted_at IS NULL ORDER BY sort_order", (user_id,)).fetchall()
+    settings = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings WHERE user_id=?", (user_id,))}
+    team_name = settings.get("team_name") or ""
+    institution_name = settings.get("institution_name") or ""
     book_title = settings.get("book_title") or "Contest Codebook"
     code_font = settings.get("code_font", DEFAULT_CODE_FONT)
     page_size = settings.get("page_size", DEFAULT_PAGE_SIZE)
     accent_color = settings.get("accent_color", "#2C2C2A")
     boilerplate_code = settings.get("boilerplate_code", "")
     cover_style = settings.get("cover_style", DEFAULT_COVER_STYLE)
+    card_style = settings.get("card_style") or "craft"
     template_accent_color = settings.get("template_accent_color", accent_color)
     _show_header_val = settings.get("show_team_footer", "1")
     show_header = _show_header_val not in (0, "0", False, None, "")
     _show_boilerplate_val = settings.get("show_boilerplate", "1")
     show_boilerplate = _show_boilerplate_val not in (0, "0", False, None, "") and bool(boilerplate_code.strip())
 
-    all_snippets = conn.execute("SELECT * FROM snippets WHERE deleted_at IS NULL").fetchall()
+    all_snippets = conn.execute("SELECT * FROM snippets WHERE user_id=? AND deleted_at IS NULL", (user_id,)).fetchall()
     snippet_by_id = {s["id"]: s for s in all_snippets}
 
     by_topic = {}
     for t in topics:
-        query = "SELECT * FROM snippets WHERE topic_id=? AND deleted_at IS NULL"
-        if exclude_unverified:
-            query += " AND verified=1"
-        query += " ORDER BY sort_order"
-        by_topic[t["id"]] = conn.execute(query, (t["id"],)).fetchall()
+        query = "SELECT * FROM snippets WHERE user_id=? AND topic_id=? AND deleted_at IS NULL ORDER BY sort_order"
+        by_topic[t["id"]] = conn.execute(query, (user_id, t["id"])).fetchall()
     conn.close()
 
     card_width_mm = _card_inner_width_mm(page_size)
     boilerplate_width_mm = _boilerplate_inner_width_mm(page_size)
 
     # Cover: five selectable styles, see _cover_html() and COVER_STYLES.
-    cover_html = _cover_html(cover_style, book_title, team_name, institution_name)
+    cover_html = _cover_html(cover_style, book_title, team_name, institution_name, accent_color=accent_color)
 
     # Boilerplate page(s): a pinned starter template that always sits right
     # after the cover. Split into the same chunks the preview computed, if
@@ -797,20 +1206,17 @@ def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = N
         boilerplate_pages = (layout or {}).get("boilerplate_pages") or None
         chunks = boilerplate_pages if boilerplate_pages else [boilerplate_code]
         multi = len(chunks) > 1
+        template_title = (settings.get("template_title") or "Template").strip()
         parts = []
         for idx, chunk_text in enumerate(chunks):
             font_size = fit_code_font_size(chunk_text, code_font, boilerplate_width_mm)
-            label = "TEMPLATE" + (f" \u2014 PART {idx + 1}/{len(chunks)}" if multi else "")
+            label = template_title.upper() + (f" \u2014 PART {idx + 1}/{len(chunks)}" if multi else "")
             id_attr = ' id="template-page-anchor"' if idx == 0 else ""
+            effective_tmpl_accent = accent_color if card_style == "craft" else template_accent_color
+            tmpl_card = _template_card_html(label, chunk_text, font_size, card_style=card_style, template_accent=effective_tmpl_accent)
             parts.append(f"""
-            <section class="boilerplate"{id_attr}>
-              <div class="boilerplate-header">
-                <span class="boilerplate-mark"></span>
-                <span class="boilerplate-name">{escape_html(label)}</span>
-              </div>
-              <div class="boilerplate-window">
-                <pre class="boilerplate-code" style="font-size:{font_size}px">{highlight_code_html(chunk_text, DEFAULT_LANGUAGE)}</pre>
-              </div>
+            <section class="boilerplate-page"{id_attr}>
+              {tmpl_card}
             </section>
             """)
         boilerplate_html = "".join(parts)
@@ -822,13 +1228,16 @@ def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = N
     index_entries = []       # [(anchor_id, topic_name, topic_color)] -- one row per topic that made it into the book
     bookmark_css_rules = ['#cover-page-anchor { bookmark-level: 1; bookmark-label: "Cover"; }']
     if show_boilerplate:
-        bookmark_css_rules.append('#template-page-anchor { bookmark-level: 1; bookmark-label: "Template"; }')
+        template_title = (settings.get("template_title") or "Template").strip()
+        bookmark_css_rules.append(f'#template-page-anchor {{ bookmark-level: 1; bookmark-label: "{escape_html(template_title)}"; }}')
     anchor_counter = 0
 
     def _next_anchor():
         nonlocal anchor_counter
         anchor_counter += 1
         return f"topic-anchor-{anchor_counter}"
+
+    card_style = settings.get("card_style") or "craft"
 
     for t in topics:
         topic_pages = layout_topics.get(t["id"])
@@ -840,14 +1249,13 @@ def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = N
                 with open("debug.log", "a") as f:
                     f.write(f"PAGE DATA TYPE: {type(page_data)} VAL: {repr(page_data)}\\n")
                 # WeasyPrint layout parity: check if JS gave us explicit columns of PRE-SPLIT snippets
+                effective_card_color = accent_color if card_style == "craft" else t["color"]
                 if isinstance(page_data, dict) and "col1" in page_data:
                     def render_col(snippets):
                         col_cards = []
                         for s in snippets:
-                            if exclude_unverified and not s.get("verified"):
-                                continue
                             font_size = s.get("font_size") or fit_code_font_size(s.get("code", ""), code_font, card_width_mm)
-                            col_cards.append(_card_html(s, t["color"], font_size))
+                            col_cards.append(_card_html(s, effective_card_color, font_size, card_style=card_style, topic_name=t["name"]))
                         return "".join(col_cards)
                     
                     col1_html = render_col(page_data.get("col1", []))
@@ -889,10 +1297,8 @@ def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = N
                                 s = None
                         if s is None or s["topic_id"] != t["id"]:
                             continue  # stale id
-                        if exclude_unverified and not s["verified"]:
-                            continue
                         font_size = fit_code_font_size(s["code"], code_font, card_width_mm)
-                        cards.append(_card_html(s, t["color"], font_size))
+                        cards.append(_card_html(s, effective_card_color, font_size, card_style=card_style, topic_name=t["name"]))
                     if not cards:
                         continue
                     is_first_rendered_page = topic_anchor is None
@@ -924,7 +1330,8 @@ def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = N
             bookmark_css_rules.append(
                 f'#{topic_anchor} {{ bookmark-level: 1; bookmark-label: "{_css_string(t["name"])}"; }}'
             )
-            cards = [_card_html(s, t["color"], fit_code_font_size(s["code"], code_font, card_width_mm)) for s in rows]
+            effective_card_color = accent_color if card_style == "craft" else t["color"]
+            cards = [_card_html(s, effective_card_color, fit_code_font_size(s["code"], code_font, card_width_mm), card_style=card_style, topic_name=t["name"]) for s in rows]
             sections_html.append(f"""
             <section class="topic-page-chunk" id="{topic_anchor}">
               <div class="topic-header">
@@ -941,7 +1348,7 @@ def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = N
     index_html = ""
     index_html = ""
 
-    css = build_css(code_font, page_size, accent_color, institution_name, team_name, show_header)
+    css = build_css(code_font, page_size, accent_color, institution_name, team_name, show_header, template_accent_color=template_accent_color)
     css += f"""
 /* Template page has its own independent accent color (Settings > Template
    accent), separate from the book's main accent color. Scoped to .boilerplate
@@ -971,6 +1378,6 @@ def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = N
 <body>{cover_html}{boilerplate_html}{index_html}{''.join(sections_html)}</body></html>"""
 
     OUTPUT_DIR.mkdir(exist_ok=True)
-    pdf_path = OUTPUT_DIR / "codebook.pdf"
-    HTML(string=html_str, base_url=str(Path(__file__).parent)).write_pdf(str(pdf_path), font_config=_FONT_CONFIG)
+    pdf_path = output_path if output_path is not None else (OUTPUT_DIR / "codebook.pdf")
+    HTML(string=html_str, base_url=str(BASE_DIR / "frontend")).write_pdf(str(pdf_path), font_config=_FONT_CONFIG)
     return pdf_path

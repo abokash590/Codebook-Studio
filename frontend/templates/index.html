@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Codebook Studio</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}?v=2">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}?v=2">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Kalam:wght@400;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=141">
+  <!-- CodeMirror: syntax-highlighted code editor with pro addons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
+  <!-- Prism: syntax-highlights code cards in the live preview, using the same
+       muted palette pdf_builder.py uses for the printed PDF (P1.2) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-kotlin.min.js"></script>
+  <!-- SortableJS: drag-and-drop reordering of topics/templates (P1.3) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+</head>
+<body>
+
+<!-- CRAFT-STYLE FLOATING / STICKY NAVBAR -->
+<header class="craft-navbar" id="craft-navbar">
+  <div class="navbar-left">
+    <div class="navbar-brand">
+      <span class="craft-brand-name brand-text-gebuk">Codebook Studio</span>
+    </div>
+  </div>
+
+  <div class="navbar-right">
+    <!-- Workspace Panel Toggles (Left Sidebar & Right Minimap Rail) -->
+    <div class="nav-panels-toggle-group" role="toolbar" aria-label="Toggle workspace panels">
+      <button type="button" class="nav-panel-btn active" id="nav-toggle-sidebar-btn" title="Toggle left sidebar (Ctrl+B)" aria-label="Toggle left sidebar" aria-pressed="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="9" y1="3" x2="9" y2="21"></line>
+        </svg>
+      </button>
+      <button type="button" class="nav-panel-btn" id="nav-toggle-rail-btn" title="Show page thumbnails (Ctrl+M)" aria-label="Toggle page thumbnails" aria-pressed="false">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="15" y1="3" x2="15" y2="21"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="nav-divider" aria-hidden="true"></div>
+
+    <button type="button" class="build-export-pill-btn download-pdf-pill-btn" id="nav-build-export-btn" title="Download Reference Book PDF">
+      <div class="btn-progress-track" id="build-progress-track"></div>
+      <div class="btn-ambient-glow" aria-hidden="true"></div>
+      <div class="btn-content-inner">
+        <div class="download-anim-icon-wrap" aria-hidden="true">
+          <svg class="download-creative-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path class="dl-icon-tray" d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+            <g class="dl-icon-arrow-group">
+              <line class="dl-icon-shaft" x1="12" y1="3" x2="12" y2="14" />
+              <polyline class="dl-icon-tip" points="7 10 12 15 17 10" />
+            </g>
+            <circle class="dl-icon-beam-dot" cx="12" cy="3" r="1.3" fill="currentColor" />
+          </svg>
+          <svg class="build-spinner-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M12 2c5.52 0 10 4.48 10 10s-4.48 10-10 10S2 17.52 2 12c0-2.5 1-4.8 2.5-6.5"/>
+          </svg>
+        </div>
+        <span class="build-label" id="nav-build-export-text">Download PDF</span>
+      </div>
+    </button>
+
+    <div class="nav-divider" aria-hidden="true"></div>
+
+    <!-- User Auth & Profile Container -->
+    <div class="nav-user-container" id="nav-user-container">
+      <!-- Unauthenticated State: Sign In Button -->
+      <button type="button" class="nav-auth-btn" id="nav-login-btn" title="Sign In or Create Account to save codebook">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span>Sign In</span>
+      </button>
+
+      <!-- Authenticated State: User Avatar & Dropdown -->
+      <div class="nav-user-pill" id="nav-user-pill" style="display: none;" tabindex="0" role="button" aria-haspopup="true" aria-expanded="false" title="Account profile">
+        <span class="user-avatar-badge" id="user-avatar-badge">U</span>
+      </div>
+
+      <!-- User Dropdown Menu -->
+      <div class="nav-user-dropdown" id="nav-user-dropdown" style="display: none;">
+        <div class="user-dropdown-header">
+          <div class="user-dropdown-name" id="user-dropdown-name">User Name</div>
+          <div class="user-dropdown-email" id="user-dropdown-email">user@example.com</div>
+        </div>
+        <div class="user-dropdown-divider"></div>
+        <a href="/admin" class="user-dropdown-item" id="user-admin-link" style="display: none; text-decoration: none; color: inherit;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
+          <span style="color: #A78BFA; font-weight: 600;">Admin Console</span>
+        </a>
+        <div class="user-dropdown-divider" id="user-admin-divider" style="display: none;"></div>
+        <div class="user-dropdown-item is-info">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          <span>Cloud Sync Active</span>
+          <span class="user-sync-dot"></span>
+        </div>
+        <div class="user-dropdown-divider"></div>
+        <button type="button" class="user-dropdown-item user-logout-btn" id="user-logout-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="app rail-collapsed">
+
+  <!-- LEFT SIDEBAR: CRAFT MODULAR PALETTE -->
+  <aside class="sidebar craft-sidebar" id="sidebar">
+
+    <!-- OBSIDIAN STYLE/VAULT TOP TAB SWITCHER -->
+    <div class="sidebar-top-header">
+      <div class="sidebar-tabs" role="tablist" aria-label="Sidebar navigation">
+        <button type="button" class="sidebar-tab active" id="sidebar-tab-style" role="tab" aria-selected="true" aria-controls="panel-style">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>Style</span>
+        </button>
+        <button type="button" class="sidebar-tab" id="sidebar-tab-vault" role="tab" aria-selected="false" aria-controls="panel-vault">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Vault</span>
+        </button>
+      </div>
+      <button type="button" class="sidebar-collapse-inner-btn" id="sidebar-collapse-inner-btn" title="Collapse sidebar" aria-label="Collapse sidebar">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="11 17 6 12 11 7"></polyline>
+          <polyline points="18 17 13 12 18 7"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <!-- TAB 1 CONTENT: STYLE (Design & Book Settings) -->
+    <div class="sidebar-panel active" id="panel-style">
+      <div class="studio-style-container" id="settings-module">
+        
+
+        <!-- Section 1: Book Identity -->
+        <div class="studio-card">
+          <div class="studio-card-head">
+            <span class="studio-card-title">Book Identity</span>
+          </div>
+
+          <div class="studio-field">
+            <label class="studio-label" for="book-title">
+              <span>Book Title</span>
+            </label>
+            <div class="studio-input-wrap">
+              <input type="text" id="book-title" class="studio-input" placeholder="e.g. Contest Codebook">
+            </div>
+          </div>
+
+          <!-- Institution on its own line (Line 1) -->
+          <div class="studio-field institution-field-wrap">
+            <label class="studio-label" for="institution-name">
+              <span>Institution</span>
+            </label>
+            <div class="combobox-wrap">
+              <input type="text" id="institution-name" class="studio-input" placeholder="Search or type institution (e.g. BUET, DU, SUST)..." autocomplete="off">
+              <button type="button" class="combobox-toggle-btn" id="institution-toggle-btn" tabindex="-1" title="Show all institutions">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="combobox-dropdown" id="institution-autocomplete-list" style="display: none;"></div>
+            </div>
+          </div>
+
+          <!-- Team Name on its own line (Line 2) -->
+          <div class="studio-field">
+            <label class="studio-label" for="team-name">
+              <span>Team Name</span>
+            </label>
+            <div class="studio-input-wrap">
+              <input type="text" id="team-name" class="studio-input" placeholder="Type your Team name">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Code Engine & Typography (No Size dropdown) -->
+        <div class="studio-card">
+          <div class="studio-card-head">
+            <span class="studio-card-title">Typography & Code Theme</span>
+          </div>
+
+          <div class="studio-field">
+            <label class="studio-label" for="code-font">Code Font</label>
+            <select id="code-font" class="studio-select">
+              <option value="JetBrains Mono">JetBrains Mono</option>
+              <option value="Fira Code">Fira Code</option>
+              <option value="IBM Plex Mono">IBM Plex Mono</option>
+              <option value="Space Mono">Space Mono</option>
+            </select>
+          </div>
+
+          <div class="studio-field">
+            <label class="studio-label" for="code-theme">Code Theme</label>
+            <select id="code-theme" class="studio-select">
+              <option value="nord">Nord</option>
+              <option value="github-light">GitHub Light</option>
+              <option value="one-light">One Light</option>
+              <option value="catppuccin">Catppuccin Latte</option>
+              <option value="tokyo-night">Tokyo Night</option>
+              <option value="dracula-light">Dracula Light</option>
+              <option value="mono-clean">Mono Clean</option>
+              <option value="cream">Cream</option>
+              <option value="sand-light">Sand Light</option>
+              <option value="solarized-light">Solarized Light</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Section 3: Cover Theme (3 Options Only) -->
+        <div class="studio-card">
+          <div class="studio-card-head">
+            <span class="studio-card-title">Cover Theme</span>
+            <span class="studio-badge-subtle">3 Layouts</span>
+          </div>
+
+          <div class="cover-visual-picker trio" id="cover-visual-picker">
+            <div class="cover-thumb-card active" data-style="minimal">
+              <div class="cover-thumb-preview thumb-minimal">
+                <span class="thumb-line-sm"></span>
+                <span class="thumb-title">Title</span>
+                <span class="thumb-rule"></span>
+              </div>
+              <span class="cover-thumb-name">Minimal</span>
+            </div>
+            <div class="cover-thumb-card" data-style="sketch">
+              <div class="cover-thumb-preview thumb-sketch">
+                <span class="thumb-badge">Notebook</span>
+                <span class="thumb-title serif">Title</span>
+                <span class="thumb-rule-accent"></span>
+              </div>
+              <span class="cover-thumb-name">Editorial</span>
+            </div>
+            <div class="cover-thumb-card" data-style="terminal">
+              <div class="cover-thumb-preview thumb-terminal">
+                <div class="thumb-term-bar">
+                  <span></span><span></span><span></span>
+                </div>
+                <span class="thumb-term-prompt">$ code</span>
+              </div>
+              <span class="cover-thumb-name">Terminal</span>
+            </div>
+          </div>
+          <select id="cover-style" style="display:none;">
+            <option value="minimal">Minimal</option>
+            <option value="sketch">Editorial</option>
+            <option value="terminal">Terminal</option>
+          </select>
+        </div>
+
+        <!-- Section 4: Card Theme (Craft, IDE Window, Academic) -->
+        <div class="studio-card">
+          <div class="studio-card-head">
+            <span class="studio-card-title">Card Theme</span>
+            <span class="studio-badge-subtle">3 Styles</span>
+          </div>
+
+          <div class="cover-visual-picker trio" id="card-visual-picker">
+            <div class="card-thumb-card active" data-style="craft">
+              <div class="cover-thumb-preview thumb-card-craft">
+                <span class="thumb-accent-bar"></span>
+                <span class="thumb-pill-badge"></span>
+                <span class="thumb-code-block"></span>
+              </div>
+              <span class="cover-thumb-name">Craft</span>
+            </div>
+            <div class="card-thumb-card" data-style="ide">
+              <div class="cover-thumb-preview thumb-card-ide">
+                <div class="thumb-ide-dots">
+                  <span></span><span></span><span></span>
+                </div>
+                <span class="thumb-code-block"></span>
+              </div>
+              <span class="cover-thumb-name">IDE Window</span>
+            </div>
+            <div class="card-thumb-card" data-style="academic">
+              <div class="cover-thumb-preview thumb-card-academic">
+                <span class="thumb-academic-rule"></span>
+                <span class="thumb-code-block"></span>
+              </div>
+              <span class="cover-thumb-name">Academic</span>
+            </div>
+          </div>
+          <select id="card-style" style="display:none;">
+            <option value="craft">Craft</option>
+            <option value="ide">IDE Window</option>
+            <option value="academic">Academic</option>
+          </select>
+        </div>
+
+        <!-- Section 5: Accent Color (Luxury Swatches) -->
+        <div class="studio-card">
+          <div class="studio-card-head">
+            <span class="studio-card-title">Accent Color</span>
+            <div class="active-accent-badge" id="active-accent-badge">
+              <span class="active-accent-dot" id="active-accent-dot"></span>
+              <span class="active-accent-hex" id="active-accent-hex">#030302</span>
+            </div>
+          </div>
+          <input type="color" id="accent-color" value="#030302" style="opacity:0; position:absolute; pointer-events:none;">
+          <div class="sketch-palette classy-palette" data-target="accent-color"></div>
+        </div>
+
+        <!-- Section 6: Running Competition Header (iOS Toggle) -->
+        <div class="studio-card studio-toggle-card">
+          <div class="studio-toggle-content">
+            <span class="studio-toggle-title">Running Header</span>
+            <span class="studio-toggle-desc">Show institution &amp; team name on every page</span>
+          </div>
+          <label class="ios-switch" title="Toggle running competition header">
+            <input type="checkbox" id="show-team-footer" checked>
+            <span class="ios-slider"></span>
+          </label>
+        </div>
+
+        <!-- Section 6: Snippet Placement after Template (iOS Toggle) -->
+        <div class="studio-card studio-toggle-card">
+          <div class="studio-toggle-content">
+            <span class="studio-toggle-title">Flow After Template</span>
+            <span class="studio-toggle-desc">Start snippets right after template on same page</span>
+          </div>
+          <label class="ios-switch" title="Start snippets right after template on same page">
+            <input type="checkbox" id="snippets-after-template" checked>
+            <span class="ios-slider"></span>
+          </label>
+        </div>
+
+
+      </div>
+    </div>
+
+    <!-- TAB 2 CONTENT: VAULT (Obsidian File Tree Explorer) -->
+    <div class="sidebar-panel" id="panel-vault" style="display: none;">
+      <!-- Obsidian Vault File Tree -->
+      <div class="obsidian-tree-wrap">
+        
+        <!-- Pinned Starter Setup Section -->
+        <div class="obsidian-section-group" id="vault-template-section">
+          <div class="obsidian-section-head">
+            <span class="obsidian-section-label">SETUP</span>
+          </div>
+          <div class="obsidian-file-row obsidian-template-file" id="template-snippet-row" role="button" tabindex="0" title="Click to edit C++ setup">
+            <span class="obsidian-folder-icon obsidian-file-icon" id="template-group-color">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <line x1="10" y1="9" x2="8" y2="9"></line>
+              </svg>
+            </span>
+            <span class="obsidian-file-title" id="template-group-name" title="Double-click to rename">Template</span>
+            <div class="obsidian-folder-actions" id="template-folder-actions">
+              <button type="button" class="obsidian-action-btn rename-template-btn" id="rename-template-btn" title="Rename Template (or double-click name)">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              </button>
+            </div>
+            <span class="obsidian-badge" id="template-status-badge">Page 2</span>
+            <label class="obsidian-toggle" title="Include/exclude setup page" onclick="event.stopPropagation()">
+              <input type="checkbox" id="show-boilerplate" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Topics & Snippets Tree -->
+        <div class="obsidian-section-group" id="vault-topics-section">
+          <div class="obsidian-section-head">
+            <div class="obsidian-section-title-wrap">
+              <span class="obsidian-section-label">SNIPPETS</span>
+            </div>
+            <div class="obsidian-section-actions">
+              <button type="button" class="obsidian-tool-icon-btn" id="vault-new-topic-btn" title="New Topic">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+                  <line x1="12" y1="10" x2="12" y2="16"></line>
+                  <line x1="9" y1="13" x2="15" y2="13"></line>
+                </svg>
+              </button>
+              <button type="button" class="obsidian-tool-icon-btn" id="vault-collapse-all-btn" title="Collapse / Expand all topic folders">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="7 6 12 10 17 6"></polyline>
+                  <polyline points="7 18 12 14 17 18"></polyline>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="obsidian-tree" id="topics-list">
+            <!-- Topics rendered dynamically by app.js -->
+          </div>
+        </div>
+
+      <p class="status sr-only" id="status-msg" role="status" aria-live="polite" style="display:none;"></p>
+    </div>
+  </aside>
+
+  <!-- CENTER PREVIEW AREA -->
+  <main class="preview-area" id="preview-area">
+
+
+    <!-- Craft.do Living Sky Atmosphere (Subtle Grain & Staggered Halftone Clouds) -->
+    <div class="preview-sky-atmosphere" aria-hidden="true">
+      <!-- Two Ambient Floating Halftone Clouds on Opposite Sides (Staggered Vertically) -->
+      <div class="sky-cloud cloud-left"></div>
+      <div class="sky-cloud cloud-right"></div>
+    </div>
+
+    <!-- Floating Studio Toolbar (Craft Frosted Glass Island) -->
+    <div class="canvas-dock craft-dock" id="canvas-dock" role="toolbar" aria-label="Canvas studio controls">
+      <!-- DUAL CANVAS SEGMENTS (Editor vs Book Preview) -->
+      <div class="dock-segment dock-segmented-control canvas-mode-switcher" role="tablist" aria-label="Canvas mode">
+        <button type="button" class="dock-segment-btn" id="mode-editor-btn" role="tab" aria-selected="false" title="File Code & Note Editor">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span class="dock-segment-label" id="mode-editor-label">Editor</span>
+        </button>
+        <button type="button" class="dock-segment-btn active" id="mode-preview-btn" role="tab" aria-selected="true" title="Compiled Book Preview">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+          <span class="dock-segment-label">Book Preview</span>
+        </button>
+      </div>
+
+      <div class="dock-divider dock-divider-mode" aria-hidden="true"></div>
+
+      <div class="dock-segment dock-budget" id="dock-page-budget" title="ICPC Competition Page Limit (Max 25 pages)">
+        <span class="dock-budget-dot" id="dock-budget-dot"></span>
+        <span class="dock-budget-text" id="dock-budget-text">0 / 25 pages</span>
+      </div>
+
+      <div class="dock-divider" aria-hidden="true"></div>
+
+      <div class="dock-segment dock-zoom-group">
+        <button type="button" class="dock-btn dock-btn-icon" id="zoom-out-btn" title="Zoom out (-)" aria-label="Zoom out">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <button type="button" class="dock-zoom-label" id="zoom-level-btn" title="Reset zoom to 100%">100%</button>
+        <button type="button" class="dock-btn dock-btn-icon" id="zoom-in-btn" title="Zoom in (+)" aria-label="Zoom in">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <button type="button" class="dock-btn dock-btn-pill" id="zoom-fit-btn" title="Fit pages to window (0)">Fit</button>
+      </div>
+    </div>
+
+    <!-- IN-CANVAS FULL FILE STUDIO EDITOR (Replaces cramped pop-up modals) -->
+    <div class="editor-canvas" id="editor-canvas" style="display: none;">
+      <div class="craft-editor-doc">
+        <!-- Responsive Scribble Arrow Bridge & Floating Frosted Button System -->
+        <div class="editor-arrow-bridge-system" id="editor-arrow-bridge-system">
+          <svg class="bridge-arrow-svg" id="bridge-arrow-svg" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path class="bridge-glow-path" id="bridge-glow-path" stroke="rgba(0, 113, 227, 0.30)" stroke-width="5" stroke-linecap="round"/>
+            <path class="bridge-main-path" id="bridge-main-path" stroke="#0071E3" stroke-width="2.3" stroke-linecap="round"/>
+            <path class="bridge-arrowhead" id="bridge-arrowhead" stroke="#0071E3" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+
+          <div class="bridge-button-wrapper" id="bridge-button-wrapper">
+            <button type="button" class="companion-frosted-btn-compact" id="canvas-floating-back-btn" title="View this file in compiled Book Preview">
+              <div class="frosted-ambient-halo"></div>
+              <div class="frosted-compact-body">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                </svg>
+                <span class="frosted-compact-label">View in Book</span>
+                <span class="frosted-compact-arrow">↗</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Document Top Bar -->
+        <div class="editor-doc-header">
+          <div class="editor-doc-header-left">
+            <button type="button" class="editor-mobile-back-btn" id="canvas-mobile-back-btn" title="Back to Vault" aria-label="Back to Vault">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+              <span>Vault</span>
+            </button>
+            <span class="editor-doc-badge" id="canvas-editor-badge">CODE</span>
+            <span class="editor-doc-status" id="canvas-editor-status">
+              <span class="status-pulse-dot"></span>
+              <span id="canvas-editor-status-text">Saved</span>
+            </span>
+          </div>
+
+          <div class="editor-doc-header-right">
+            <button type="button" class="editor-header-delete-btn" id="canvas-editor-delete-btn" title="Delete this file" style="display: none;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              <span>Delete</span>
+            </button>
+            <button type="button" class="companion-frosted-btn-compact in-header-back-btn" id="canvas-header-back-btn" title="View this file in compiled Book Preview">
+              <div class="frosted-ambient-halo"></div>
+              <div class="frosted-compact-body">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                </svg>
+                <span class="frosted-compact-label">View in Book</span>
+                <span class="frosted-compact-arrow">↗</span>
+              </div>
+            </button>
+            <div class="editor-header-arrow-origin" id="editor-header-arrow-origin" role="button" tabindex="0" title="Return to Book Preview">
+              <span class="origin-ink-dot"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero Document Title -->
+        <div class="editor-title-wrap">
+          <input type="text" class="editor-hero-title" id="canvas-editor-title" placeholder="Untitled Snippet..." autocomplete="off">
+        </div>
+
+        <!-- Tactical Metadata (Time Complexity & Language) -->
+        <div class="editor-meta-bar" id="canvas-editor-meta-bar">
+          <div class="editor-meta-chip" id="canvas-editor-complexity-chip">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span class="editor-meta-label">Complexity:</span>
+            <input type="text" class="editor-meta-input" id="canvas-editor-complexity" placeholder="e.g. O((V + E) log V)">
+          </div>
+          <div class="editor-meta-chip editor-lang-chip" id="canvas-editor-lang-chip">
+            <span class="editor-meta-label">Language:</span>
+            <select id="canvas-editor-lang" class="editor-lang-select" title="Syntax Language">
+              <option value="cpp">C++</option>
+              <option value="c">C</option>
+              <option value="python">Python</option>
+            </select>
+          </div>
+          <div class="editor-meta-chip" id="canvas-template-flow-chip" style="display: none;">
+            <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 11.5px; font-weight: 500; color: #55534E;">
+              <input type="checkbox" id="canvas-snippets-after-template" style="cursor: pointer;" checked>
+              <span>Flow Snippets on Same Page</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Code Workspace (macOS Studio Window) -->
+        <div class="editor-code-workspace" id="canvas-editor-code-workspace">
+          <div class="editor-window-ribbon">
+            <div class="editor-traffic-lights">
+              <span class="traffic-dot dot-red"></span>
+              <span class="traffic-dot dot-yellow"></span>
+              <span class="traffic-dot dot-green"></span>
+            </div>
+            <span class="editor-ribbon-title">C++ 20 Monospace Editor</span>
+            <div class="editor-ribbon-actions">
+              <button type="button" class="editor-copy-code-btn" id="canvas-editor-copy-btn" title="Copy code">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>Copy</span>
+              </button>
+            </div>
+          </div>
+          <div class="editor-cm-container" id="canvas-editor-cm-container">
+            <textarea id="canvas-editor-code" placeholder="// Type or paste C++ code here..."></textarea>
+          </div>
+        </div>
+
+        <!-- Note Workspace (Craft Editorial Paper Sheet) -->
+        <div class="editor-note-workspace" id="canvas-editor-note-workspace" style="display:none;">
+          <div class="editor-note-toolbar">
+            <span class="editor-note-hint">Markdown enabled: **bold**, *italic*, - bullet lists, LaTeX equations</span>
+          </div>
+          <textarea class="editor-note-textarea" id="canvas-editor-note" placeholder="Write algorithm explanation, key observations, or markdown formulas here..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOOK PREVIEW PAGES -->
+    <div class="preview-scroll" id="preview-scroll">
+      <!-- A4 pages filled by JS -->
+    </div>
+  </main>
+
+  <!-- THUMBNAILS RAIL (Minimap) -->
+  <aside class="thumbnails-rail collapsed" id="thumbnails-rail">
+    <!-- Thumbnail items generated by JS -->
+  </aside>
+
+</div>
+
+<!-- MODAL: add/edit template (Craft Theme) -->
+<div class="modal-backdrop" id="snippet-modal-backdrop">
+  <div class="modal craft-modal" role="dialog" aria-modal="true" aria-labelledby="snippet-modal-title">
+    <div class="craft-modal-header">
+      <div class="craft-modal-header-left">
+        <span class="craft-modal-badge" id="snippet-modal-badge">CODE</span>
+        <h2 class="craft-modal-title" id="snippet-modal-title">New Code Snippet</h2>
+      </div>
+      <div class="craft-modal-header-right">
+        <div class="craft-modal-topic-wrap" title="Topic folder">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          <select id="snippet-topic" class="craft-modal-topic-select"></select>
+        </div>
+        <button type="button" class="craft-modal-close" id="snippet-close-btn" aria-label="Close dialog">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+        </button>
+      </div>
+    </div>
+
+    <form id="snippet-form" class="craft-modal-form">
+      <!-- Hidden technical inputs for compatibility -->
+      <input type="hidden" id="snippet-id">
+      <input type="hidden" id="snippet-kind" value="code">
+      <input type="hidden" id="snippet-subtitle" value="">
+      <input type="hidden" id="snippet-language" value="cpp">
+      <input type="hidden" id="snippet-topic-alt">
+      <div id="snippet-formulas-list" style="display:none;"></div>
+      <div id="similarity-warning" class="similarity-warning" style="display:none;" role="status"></div>
+
+      <!-- Title & Complexity Row -->
+      <div class="craft-form-row" id="craft-title-complexity-row">
+        <div class="craft-form-field craft-field-title" id="field-title">
+          <label class="craft-modal-label" for="snippet-title">Title</label>
+          <input type="text" id="snippet-title" class="craft-modal-input" required placeholder="e.g. Segment Tree (Point Update, Range Sum)">
+        </div>
+        <div class="craft-form-field craft-field-complexity" id="field-complexity">
+          <label class="craft-modal-label" for="snippet-complexity">Time Complexity</label>
+          <input type="text" id="snippet-complexity" class="craft-modal-input" placeholder="e.g. O(log N)">
+        </div>
+      </div>
+
+      <!-- Code Field (for Code cards) -->
+      <div class="craft-form-field craft-field-editor" id="field-code">
+        <label class="craft-modal-label" for="snippet-code">Code</label>
+        <div class="craft-cm-wrap">
+          <textarea id="snippet-code" rows="12" placeholder="// Paste or type C++ code here..."></textarea>
+        </div>
+      </div>
+
+      <!-- Note Field (for Note cards) -->
+      <div class="craft-form-field craft-field-note" id="field-note" style="display:none;">
+        <label class="craft-modal-label" for="snippet-notes">Note</label>
+        <textarea id="snippet-notes" class="craft-modal-textarea" rows="9" placeholder="Write key observations, formulas, or explanation here..."></textarea>
+      </div>
+
+      <!-- Modal Actions -->
+      <div class="craft-modal-actions">
+        <button type="button" class="btn btn-ghost-danger" id="snippet-delete-btn" style="display:none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          <span>Delete</span>
+        </button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-pill-nav" id="snippet-cancel-btn">Cancel</button>
+        <button type="submit" class="btn btn-pill-primary" id="snippet-save-btn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: template page -->
+<div class="modal-backdrop" id="template-modal-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="template-modal-title">
+    <h2 id="template-modal-title">C++ Setup Template</h2>
+    <form id="template-form">
+      <div class="row">
+        <label>Template accent color
+          <input type="color" id="template-accent-color" value="#5B4A8A" style="opacity:0; position:absolute; pointer-events:none;">
+          <div class="sketch-palette" data-target="template-accent-color"></div>
+        </label>
+      </div>
+
+      <label class="checkbox" style="margin: 2px 0 6px;">
+        <input type="checkbox" id="modal-show-boilerplate" checked>
+        Include pinned template page (right after the cover)
+      </label>
+
+      <label class="checkbox" style="margin: 2px 0 6px;">
+        <input type="checkbox" id="modal-snippets-after-template" checked>
+        Start snippets right after template (on same page)
+      </label>
+
+      <label>C++ Setup Template (Macro/Pragma/Includes)
+        <textarea id="boilerplate-code" rows="14" placeholder="#include <iostream>..."></textarea>
+      </label>
+
+      <div class="modal-actions">
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="template-cancel-btn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="template-save-btn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: add topic -->
+<div class="modal-backdrop" id="topic-modal-backdrop">
+  <div class="modal modal-small" role="dialog" aria-modal="true" aria-labelledby="topic-modal-title">
+    <h2 id="topic-modal-title">Add topic</h2>
+    <form id="topic-form">
+      <label>Topic name
+        <input type="text" id="topic-name" required placeholder="e.g. Geometry">
+      </label>
+      <label>Color
+        <input type="color" id="topic-color" value="#378ADD" style="opacity:0; position:absolute; pointer-events:none;">
+        <div class="sketch-palette" data-target="topic-color"></div>
+      </label>
+      <div class="modal-actions">
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="topic-cancel-btn">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- CONTEXTUAL ANCHORED DELETE POPOVER (No full-screen blur, responsive) -->
+<div class="confirm-popover-backdrop" id="confirm-modal-backdrop">
+  <div class="confirm-popover-card" id="confirm-popover-card" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+    <div class="confirm-popover-top">
+      <div class="confirm-popover-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <line x1="10" y1="11" x2="10" y2="17"></line>
+          <line x1="14" y1="11" x2="14" y2="17"></line>
+        </svg>
+      </div>
+      <div class="confirm-popover-heading" id="confirm-modal-title">Delete snippet?</div>
+    </div>
+    <p class="confirm-popover-message" id="confirm-modal-message"></p>
+    <div class="confirm-popover-actions">
+      <button type="button" class="confirm-popover-btn confirm-btn-cancel" id="confirm-modal-cancel-btn">Cancel</button>
+      <button type="button" class="confirm-popover-btn confirm-btn-danger" id="confirm-modal-confirm-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- COMMAND PALETTE / RAYCAST-STYLE QUICK SWITCHER (Ctrl+K / Cmd+K) -->
+<div class="cmd-palette-backdrop" id="cmd-palette-backdrop" style="display:none;" role="dialog" aria-modal="true" aria-label="Command Palette">
+  <div class="cmd-palette-modal" id="cmd-palette-modal">
+    <div class="cmd-palette-search-row">
+      <svg class="cmd-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input type="text" id="cmd-palette-input" class="cmd-palette-input" placeholder="Type a snippet name, topic, or command..." autocomplete="off" spellcheck="false">
+      <kbd class="cmd-esc-badge" id="cmd-palette-close">ESC</kbd>
+    </div>
+    <div class="cmd-palette-results" id="cmd-palette-results">
+      <!-- Injected dynamically by app.js -->
+    </div>
+    <div class="cmd-palette-footer">
+      <div class="cmd-tip">
+        <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+        <span><kbd>↵</kbd> Open in Book</span>
+        <span><kbd>Shift+↵</kbd> Edit</span>
+        <span><kbd>ESC</kbd> Close</span>
+      </div>
+      <span class="cmd-status" id="cmd-palette-count">0 items</span>
+    </div>
+  </div>
+</div>
+
+<!-- DEDICATED FULL-PAGE SPLIT AUTHENTICATION SCREEN -->
+<div class="auth-page-view" id="auth-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+  <div class="auth-page-split">
+    
+    <!-- LEFT: CRAFT SKY-BLUE SHOWCASE WITH REAL A4 CODEBOOK PAGES -->
+    <div class="auth-page-showcase">
+      <!-- Authentic Craft Clouds pinned to borders -->
+      <div class="sky-cloud cloud-left auth-cloud-left"></div>
+      <div class="sky-cloud cloud-right auth-cloud-right"></div>
+      <!-- Tactile Micro-Grain Film Overlay -->
+      <div class="auth-sky-grain"></div>
+
+      <!-- Top Branding -->
+      <div class="auth-showcase-brand">
+        <div class="auth-showcase-logo">
+          <img src="{{ url_for('static', filename='favicon.png') }}?v=3" alt="Codebook Studio" class="auth-showcase-logo-img">
+        </div>
+        <span class="craft-brand-name brand-text-gebuk auth-showcase-brand-text">Codebook Studio</span>
+      </div>
+
+      <!-- Hero Header -->
+      <div class="auth-showcase-hero">
+        <div class="auth-showcase-tag">
+          <span>ICPC &amp; Competitive Programming</span>
+        </div>
+        <h1 class="auth-showcase-heading">Craft your championship contest codebook.</h1>
+        <p class="auth-showcase-desc">
+          Format, organize, and compile world-class algorithmic libraries into high-density, tournament-compliant A4 reference books.
+        </p>
+      </div>
+
+      <!-- REAL STACKED A4 CODEBOOK SHEETS (Living Preview) -->
+      <div class="auth-stacked-sheets">
+        
+        <!-- Sheet 2: Peeking Behind (Graph Algorithms) -->
+        <div class="auth-a4-sheet sheet-back" aria-hidden="true">
+          <div class="a4-sheet-running-head">
+            <span>CODEBOOK STUDIO // ICPC REFERENCE</span>
+            <span>PAGE 02</span>
+          </div>
+          <div class="a4-sheet-topic-title">02. GRAPH THEORY &amp; FLOWS</div>
+          
+          <!-- Existing IDE Window Snippet Theme (Option B) -->
+          <div class="card-b a4-ide-card">
+            <div class="card-b-windowbar">
+              <div class="card-b-controls">
+                <span class="card-b-dot" style="background:#EF4444;"></span>
+                <span class="card-b-dot" style="background:#F59E0B;"></span>
+                <span class="card-b-dot" style="background:#10B981;"></span>
+              </div>
+              <div class="card-b-filetab">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+                <span>dijkstra.cpp</span>
+              </div>
+              <span class="card-b-complexity">O((V+E) log V)</span>
+            </div>
+            <div class="card-b-body">
+              <div class="card-b-title-line">Dijkstra Shortest Path</div>
+              <div class="card-b-notes">
+                Observation: Min-heap priority queue with <code>{dist, u}</code>. Non-negative edges.
+              </div>
+              <pre class="card-b-code"><code><span class="kwd">vector</span>&lt;<span class="kwd">ll</span>&gt; <span class="fn">dijkstra</span>(<span class="kwd">int</span> s, <span class="kwd">int</span> n, <span class="kwd">vector</span>&lt;<span class="kwd">vector</span>&lt;pair&lt;<span class="kwd">int</span>,<span class="kwd">ll</span>&gt;&gt;&gt;&amp; g) {
+  <span class="kwd">vector</span>&lt;<span class="kwd">ll</span>&gt; d(n, INF); d[s] = <span class="num">0</span>;
+  <span class="kwd">priority_queue</span>&lt;pair&lt;<span class="kwd">ll</span>,<span class="kwd">int</span>&gt;, <span class="kwd">vector</span>&lt;pair&lt;<span class="kwd">ll</span>,<span class="kwd">int</span>&gt;&gt;, greater&lt;&gt;&gt; pq;
+  pq.push({<span class="num">0</span>, s});
+  <span class="kwd">while</span> (!pq.empty()) {
+    auto [dist_u, u] = pq.top(); pq.pop();
+    <span class="kwd">if</span> (dist_u &gt; d[u]) <span class="kwd">continue</span>;
+    <span class="kwd">for</span> (auto&amp; [v, w] : g[u])
+      <span class="kwd">if</span> (d[u] + w &lt; d[v]) { d[v] = d[u] + w; pq.push({d[v], v}); }
+  }
+  <span class="kwd">return</span> d;
+}</code></pre>
+            </div>
+          </div>
+          <div class="a4-sheet-footer">
+            <span>A4 Document Preview · 2-Column Standard</span>
+            <span>2 / 25</span>
+          </div>
+        </div>
+
+        <!-- Sheet 1: Front Active Sheet (Range Queries) -->
+        <div class="auth-a4-sheet sheet-front">
+          <div class="a4-sheet-running-head">
+            <span>CODEBOOK STUDIO // ICPC REFERENCE</span>
+            <span>PAGE 01</span>
+          </div>
+          <div class="a4-sheet-topic-title">01. DATA STRUCTURES &amp; TREES</div>
+          
+          <!-- Existing IDE Window Snippet Theme (Option B) -->
+          <div class="card-b a4-ide-card">
+            <div class="card-b-windowbar">
+              <div class="card-b-controls">
+                <span class="card-b-dot" style="background:#EF4444;"></span>
+                <span class="card-b-dot" style="background:#F59E0B;"></span>
+                <span class="card-b-dot" style="background:#10B981;"></span>
+              </div>
+              <div class="card-b-filetab">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+                <span>segtree.cpp</span>
+              </div>
+              <span class="card-b-complexity">O(log N)</span>
+            </div>
+            <div class="card-b-body">
+              <div class="card-b-title-line">Iterative Segment Tree</div>
+              <div class="card-b-notes">
+                Observation: Point update and range sum query. Zero-indexed leaves at <code>tree[p + n]</code>.
+              </div>
+              <pre class="card-b-code"><code><span class="kwd">template</span>&lt;<span class="kwd">class</span> <span class="cls">T</span>&gt; <span class="kwd">struct</span> <span class="cls">SegTree</span> {
+  <span class="kwd">int</span> n; <span class="kwd">vector</span>&lt;<span class="cls">T</span>&gt; tree;
+  <span class="fn">SegTree</span>(<span class="kwd">int</span> n) : n(n), tree(<span class="num">2</span> * n, <span class="num">0</span>) {}
+  <span class="kwd">void</span> <span class="fn">update</span>(<span class="kwd">int</span> p, <span class="cls">T</span> val) {
+    <span class="kwd">for</span> (tree[p += n] = val; p &gt; <span class="num">1</span>; p &gt;&gt;= <span class="num">1</span>)
+      tree[p &gt;&gt; <span class="num">1</span>] = tree[p] + tree[p ^ <span class="num">1</span>];
+  }
+  <span class="cls">T</span> <span class="fn">query</span>(<span class="kwd">int</span> l, <span class="kwd">int</span> r) {
+    <span class="cls">T</span> res = <span class="num">0</span>;
+    <span class="kwd">for</span> (l += n, r += n; l &lt; r; l &gt;&gt;= <span class="num">1</span>, r &gt;&gt;= <span class="num">1</span>) {
+      <span class="kwd">if</span> (l &amp; <span class="num">1</span>) res += tree[l++];
+      <span class="kwd">if</span> (r &amp; <span class="num">1</span>) res += tree[--r];
+    }
+    <span class="kwd">return</span> res;
+  }
+};</code></pre>
+            </div>
+          </div>
+
+          <div class="a4-sheet-footer">
+            <span>A4 Document Preview · 2-Column Standard</span>
+            <span>1 / 25</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Feature Highlights -->
+      <div class="auth-showcase-features">
+        <div class="auth-feature-pill">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+          <span>Instant A4 PDF</span>
+        </div>
+        <div class="auth-feature-pill">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path></svg>
+          <span>Cloud Sync Across Devices</span>
+        </div>
+        <div class="auth-feature-pill">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+          <span>100% Free & Open Source</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: THE SIGN IN CARD (Desktop & Mobile) -->
+    <div class="auth-page-card-panel">
+      <!-- Back to Studio Close Button -->
+      <div class="auth-card-top-bar">
+        <button type="button" class="auth-back-studio-btn" id="auth-close-btn" aria-label="Back to studio">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span>Back to Studio</span>
+        </button>
+      </div>
+
+      <div class="auth-card-inner">
+        <!-- Header -->
+        <div class="auth-card-header">
+          <div class="auth-card-brand-icon">
+            <img src="{{ url_for('static', filename='favicon.png') }}?v=3" alt="Codebook Studio" class="auth-card-logo-img">
+          </div>
+          <h2 class="auth-card-title" id="auth-modal-title"><span class="auth-title-prefix">Sign In to</span> <span class="craft-brand-name brand-text-gebuk auth-title-brand">Codebook Studio</span></h2>
+          <p class="auth-card-subtitle" id="auth-banner-note">Sign in to access your saved topics, snippets, and sync across devices.</p>
+        </div>
+
+        <!-- 1-Click Social Sign In Buttons -->
+        <div class="auth-social-group">
+          <a href="/api/auth/google" class="auth-social-btn google-btn" id="auth-google-btn" title="Sign in with your Google account">
+            <svg class="social-icon" width="18" height="18" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span>Continue with Google</span>
+          </a>
+
+          <a href="/api/auth/github" class="auth-social-btn github-btn" id="auth-github-btn" title="Sign in with your GitHub account">
+            <svg class="social-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+            <span>Continue with GitHub</span>
+          </a>
+        </div>
+
+        <!-- Divider -->
+        <div class="auth-divider">
+          <span>or continue with email</span>
+        </div>
+
+        <!-- Segmented Control Tabs (Sign In vs Sign Up) -->
+        <div class="auth-tabs" role="tablist">
+          <button type="button" class="auth-tab active" id="auth-tab-login" role="tab" aria-selected="true">Sign In</button>
+          <button type="button" class="auth-tab" id="auth-tab-register" role="tab" aria-selected="false">Create Account</button>
+        </div>
+
+        <div class="auth-error-msg" id="auth-error-msg" style="display: none;"></div>
+
+        <form class="auth-form" id="auth-form" autocomplete="on">
+          <div class="craft-form-field" id="auth-name-field" style="display: none;">
+            <label class="craft-modal-label" for="auth-name">Your Full Name</label>
+            <input type="text" id="auth-name" class="craft-modal-input" placeholder="e.g. Alex Johnson" autocomplete="name">
+          </div>
+
+          <div class="craft-form-field">
+            <label class="craft-modal-label" for="auth-email">Email Address</label>
+            <input type="email" id="auth-email" class="craft-modal-input" required placeholder="alex@example.com" autocomplete="email">
+          </div>
+
+          <div class="craft-form-field">
+            <label class="craft-modal-label" for="auth-password">Password</label>
+            <input type="password" id="auth-password" class="craft-modal-input" required placeholder="At least 6 characters" autocomplete="current-password">
+          </div>
+
+          <div class="auth-modal-actions">
+            <button type="submit" class="btn btn-pill-primary auth-submit-full" id="auth-submit-btn">
+              <span id="auth-submit-text">Sign In</span>
+            </button>
+          </div>
+        </form>
+
+        <div class="auth-card-footer">
+          <span>Protected with secure cloud encryption. Free forever.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FLOATING GLASS TOAST NOTIFICATION CONTAINER -->
+<div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+<!-- MOBILE BOTTOM NAVIGATION BAR -->
+<nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="Mobile Navigation">
+  <button type="button" class="mobile-nav-btn active" id="mobile-tab-style" data-tab="style" aria-label="Style Settings">
+    <svg class="mobile-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+    <span class="mobile-nav-label">Style</span>
+  </button>
+  <button type="button" class="mobile-nav-btn" id="mobile-tab-vault" data-tab="vault" aria-label="Vault Snippets">
+    <svg class="mobile-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+    </svg>
+    <span class="mobile-nav-label">Vault</span>
+  </button>
+  <button type="button" class="mobile-nav-btn" id="mobile-tab-preview" data-tab="preview" aria-label="Book Preview">
+    <svg class="mobile-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+    </svg>
+    <span class="mobile-nav-label">Preview</span>
+  </button>
+</nav>
+
+<script src="{{ url_for('static', filename='app.js') }}?v=100"></script>
+</body>
+</html>
