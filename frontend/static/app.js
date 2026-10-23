@@ -3448,13 +3448,11 @@ async function buildPreviewHtml() {
 <head>
   <meta charset="utf-8">
   <title>Codebook</title>
-  <!-- Google Fonts: same as live preview -->
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <!-- Prism CSS only for base token formatting. NO Prism JS scripts here!
-       The live preview DOM already has syntax highlighting applied (tokens are
-       already <span class="token ..."> elements with baked inline colors).
-       Running Prism.highlightAll() again would re-tokenize the code and create
-       new spans without the baked colors, making PDF colors differ from preview. -->
+  <!-- Full Google Fonts suite identical to live app for razor-sharp vector typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Kalam:wght@400;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap" rel="stylesheet">
+  <!-- Prism CSS for token styling -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
   <style>
     /* Baked CSS variables + full stylesheet */
@@ -3466,8 +3464,14 @@ async function buildPreviewHtml() {
       margin: 0;
     }
     @media print, all {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
       html, body {
         background: white !important;
+        color: #000000 !important;
         margin: 0 !important;
         padding: 0 !important;
         height: auto !important;
@@ -3475,6 +3479,8 @@ async function buildPreviewHtml() {
         max-height: none !important;
         overflow: visible !important;
         position: static !important;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
       }
       .app, .preview-area, .preview-scroll {
         display: block !important;
@@ -3487,23 +3493,35 @@ async function buildPreviewHtml() {
         padding: 0 !important;
         margin: 0 !important;
         position: static !important;
+        zoom: 1 !important;
+        transform: none !important;
       }
       .a4-page {
         width: 210mm !important;
         min-height: 297mm !important;
         height: 297mm !important;
+        max-height: 297mm !important;
+        box-sizing: border-box !important;
         margin: 0 !important;
         padding: 14mm !important;
         box-shadow: none !important;
         border-radius: 0 !important;
+        border: none !important;
         page-break-after: always !important;
         break-after: page !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
         overflow: hidden !important;
         position: relative !important;
+        zoom: 1 !important;
+        transform: none !important;
       }
       .a4-page:last-child {
         page-break-after: avoid !important;
         break-after: avoid !important;
+      }
+      .card-hover-launcher, .hover-launcher-left, .hover-launcher-right, .mobile-bottom-nav, #mobile-bottom-nav, .mobile-nav-btn {
+        display: none !important;
       }
     }
   </style>
@@ -3712,7 +3730,17 @@ async function directBrowserPrint() {
     doc.write(html);
     doc.close();
 
-    // Trigger print specifically on the lightweight isolated document (loads in <1s)
+    // Ensure all typography Google Fonts are 100% loaded for ultra-crisp vector PDF quality
+    if (iframe.contentWindow.document.fonts && iframe.contentWindow.document.fonts.ready) {
+      try {
+        await Promise.race([
+          iframe.contentWindow.document.fonts.ready,
+          new Promise((resolve) => setTimeout(resolve, 800))
+        ]);
+      } catch (e) {}
+    }
+
+    // Trigger print specifically on the lightweight isolated document
     setTimeout(() => {
       try {
         iframe.contentWindow.focus();
@@ -3723,7 +3751,7 @@ async function directBrowserPrint() {
       setTimeout(() => {
         if (iframe && iframe.parentNode) iframe.remove();
       }, 30000);
-    }, 120);
+    }, 80);
   } catch (err) {
     window.print();
   }
@@ -3733,6 +3761,8 @@ window.addEventListener("beforeprint", () => {
   if (canvasViewMode !== "preview") {
     setCanvasMode("preview");
   }
+  const mobileNav = $("mobile-bottom-nav");
+  if (mobileNav) mobileNav.style.display = "none";
   const toastContainer = $("toast-container");
   if (toastContainer) {
     toastContainer.innerHTML = "";
@@ -3744,6 +3774,8 @@ window.addEventListener("beforeprint", () => {
 });
 
 window.addEventListener("afterprint", () => {
+  const mobileNav = $("mobile-bottom-nav");
+  if (mobileNav) mobileNav.style.display = "";
   const scroll = $("preview-scroll");
   if (scroll && typeof currentZoom !== "undefined") {
     scroll.style.zoom = currentZoom;

@@ -5598,6 +5598,9 @@ pre.card-code, pre.boilerplate-code {
   .tooltip,
   .nav-auth-btn,
   .nav-user-pill,
+  .mobile-bottom-nav,
+  #mobile-bottom-nav,
+  .mobile-nav-btn,
   .dock-segmented-control,
   .dock-budget,
   .dock-zoom-group {
