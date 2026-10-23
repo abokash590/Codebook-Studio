@@ -36,11 +36,13 @@ _debounce_timer = None
 
 def get_sync_status():
     with _state_lock:
-        return dict(_sync_state)
+        st = dict(_sync_state)
+        st["configured"] = bool(os.environ.get("GITHUB_SYNC_TOKEN", "").strip())
+        return st
 
 
 def _api_request(url: str, method: str = "GET", payload: dict = None, token: str = None) -> dict:
-    req_token = token or GIST_TOKEN
+    req_token = token or os.environ.get("GITHUB_SYNC_TOKEN", "").strip()
     headers = {
         "User-Agent": "Codebook-Studio-Sync",
         "Accept": "application/vnd.github+json",

@@ -72,11 +72,19 @@ app.secret_key = os.environ.get("SECRET_KEY", "codebook-studio-secret-987123456"
 
 # Attempt restoring persistent SQLite database from GitHub Gist before initializing
 try:
-    restore_db_from_gist()
+    _restored = restore_db_from_gist()
 except Exception as _e:
     app.logger.warning(f"Gist restore failed on boot: {_e}")
+    _restored = False
 
 init_db()
+
+# If not restored from existing Gist, ensure initial database state is backed up to Gist on boot
+if not _restored and os.environ.get("GITHUB_SYNC_TOKEN"):
+    try:
+        schedule_gist_sync(delay_seconds=3.0)
+    except Exception:
+        pass
 
 
 @app.after_request
