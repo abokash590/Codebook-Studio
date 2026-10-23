@@ -73,7 +73,10 @@ def build_pdf_from_html(html_content: str, output_path: Path | None = None) -> P
     # Primary Engine: WeasyPrint in-process Cairo vector renderer (~50MB RAM, fits easily in 512MB Render tier)
     if HAS_WEASYPRINT and HTML:
         try:
-            HTML(string=html_content, base_url=str(BASE_DIR / "frontend")).write_pdf(str(pdf_path), font_config=_FONT_CONFIG)
+            # Strip external web fonts / CDN stylesheets that hang on network requests
+            cleaned_html = re.sub(r'<link[^>]+fonts\.(?:googleapis|gstatic)\.com[^>]*>', '', html_content, flags=re.I)
+            cleaned_html = re.sub(r'<link[^>]+cdnjs\.cloudflare\.com[^>]*>', '', cleaned_html, flags=re.I)
+            HTML(string=cleaned_html, base_url=str(BASE_DIR / "frontend")).write_pdf(str(pdf_path), font_config=_FONT_CONFIG)
             if pdf_path.exists() and pdf_path.stat().st_size > 1000:
                 return pdf_path
         except Exception as weasy_err:
@@ -1244,8 +1247,7 @@ def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = N
             """)
         boilerplate_html = "".join(parts)
 
-    layout_topics = {}
-    with open('debug_layout.log', 'a') as f: f.write(f'LAYOUT KEYS BEFORE: {layout}\n')
+    layout_topics = (layout or {}).get("topics") or {}
 
     sections_html = []
     index_entries = []       # [(anchor_id, topic_name, topic_color)] -- one row per topic that made it into the book

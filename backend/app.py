@@ -902,18 +902,9 @@ def api_build():
             user_pdf_name = f"codebook_{uid}.pdf"
             user_pdf_path = OUTPUT_DIR / user_pdf_name
 
-            html_content = body.get("html")
-            if html_content:
-                (OUTPUT_DIR / f"last_build_{uid}.html").write_text(html_content, encoding="utf-8")
-                try:
-                    path = build_pdf_from_html(html_content, output_path=user_pdf_path)
-                except Exception as chrome_err:
-                    print(f"Chrome PDF build warning: {chrome_err}. Falling back to internal engine...")
-                    path = build_codebook_pdf(user_id=uid, output_path=user_pdf_path)
-                    engine = "weasyprint"
-            else:
-                layout = body.get("layout")
-                path = build_codebook_pdf(layout=layout, user_id=uid, output_path=user_pdf_path)
+            # Fast native vector builder with embedded local fonts (~2s render, zero network requests)
+            engine = "weasyprint"
+            path = build_codebook_pdf(layout=body.get("layout"), user_id=uid, output_path=user_pdf_path)
 
             session["last_build_file"] = user_pdf_name
 

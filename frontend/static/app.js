@@ -3731,16 +3731,15 @@ async function buildPdf() {
   let currentPct = 15;
 
   try {
-    const { html, pageCount } = await buildPreviewHtml();
-    updateBuildProgress("Baking styles & syntax...", 35);
+    updateBuildProgress("Rendering vector pages...", 35);
 
     _progressInterval = setInterval(() => {
-      if (currentPct < 88) {
-        currentPct += Math.floor(Math.random() * 8) + 4;
-        const msg = currentPct < 60 ? "Typesetting pages..." : "Compiling with Chrome engine...";
+      if (currentPct < 90) {
+        currentPct += Math.floor(Math.random() * 10) + 8;
+        const msg = currentPct < 65 ? "Typesetting pages..." : "Generating vector PDF...";
         updateBuildProgress(msg, currentPct);
       }
-    }, 450);
+    }, 180);
 
     const controller = new AbortController();
     const abortTimeout = setTimeout(() => controller.abort(), 75000); // 75s timeout to avoid worker hung
@@ -3748,7 +3747,7 @@ async function buildPdf() {
     const res = await fetch("/api/build", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ html }),
+      body: JSON.stringify({}),
       signal: controller.signal,
     });
     clearTimeout(abortTimeout);
