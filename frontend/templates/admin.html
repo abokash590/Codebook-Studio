@@ -1280,6 +1280,55 @@
       <!-- 6. MAINTENANCE TAB -->
       <section id="tab-maintenance" class="tab-pane">
         <div class="maintenance-grid">
+          <!-- GitHub Gist Cloud Auto-Sync Card -->
+          <div class="tool-card" style="border: 1.5px solid #0071E3; background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);">
+            <div class="tool-header">
+              <div class="tool-icon" style="background: rgba(0, 113, 227, 0.1); color: #0071E3;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+              </div>
+              <div class="tool-meta">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                  <h3>GitHub Gist Cloud Auto-Sync</h3>
+                  <span id="gist-sync-badge" class="status-pill active" style="font-size: 11px; padding: 2px 8px;">Checking...</span>
+                </div>
+                <p>Persists <code style="font-family: var(--font-mono); color: #0071E3;">codebook.db</code> to a private GitHub Gist across Render/Railway redeployments. Automatically backs up on data writes and restores on boot.</p>
+                <div id="gist-sync-meta" style="font-size: 12px; color: var(--text-muted); margin-top: 8px; font-family: var(--font-mono);">
+                  Gist ID: <span id="gist-id-display">None</span> • Last Synced: <span id="gist-last-sync-display">Never</span>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button class="tool-btn tool-btn-primary" id="btn-gist-sync-now" style="flex: 1; min-width: 140px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Sync Now (Push to Gist)
+              </button>
+              <button class="tool-btn tool-btn-secondary" id="btn-gist-restore-now" style="flex: 1; min-width: 140px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Restore Now (Pull from Gist)
+              </button>
+            </div>
+          </div>
+
+          <!-- Restore from .db file Card -->
+          <div class="tool-card">
+            <div class="tool-header">
+              <div class="tool-icon" style="color: #10B981;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </div>
+              <div class="tool-meta">
+                <h3>Restore SQLite Database (.db file)</h3>
+                <p>Upload a previously exported <code style="font-family: var(--font-mono); color: #10B981;">codebook_backup.db</code> file to replace or restore current database tables instantly.</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="file" id="db-file-input" accept=".db" style="display: none;">
+              <button class="tool-btn tool-btn-secondary" id="btn-select-db-file" style="flex: 1;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Select .db File & Restore
+              </button>
+            </div>
+          </div>
+
           <div class="tool-card">
             <div class="tool-header">
               <div class="tool-icon">
@@ -1928,6 +1977,125 @@
     }
   };
 
+  // Gist Cloud Sync Handlers
+  async function loadGistSyncStatus() {
+    try {
+      const res = await fetch('/api/admin/gist-sync/status');
+      const data = await res.json();
+      if (data.ok && data.sync) {
+        const s = data.sync;
+        const badge = document.getElementById('gist-sync-badge');
+        const gistIdDisplay = document.getElementById('gist-id-display');
+        const lastSyncDisplay = document.getElementById('gist-last-sync-display');
+
+        if (s.configured) {
+          badge.textContent = s.last_sync_status === 'error' ? 'Sync Error' : (s.pending_sync ? 'Sync Pending...' : 'Connected & Active');
+          badge.className = `status-pill ${s.last_sync_status === 'error' ? 'blocked' : 'active'}`;
+          badge.style.background = s.last_sync_status === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
+          badge.style.color = s.last_sync_status === 'error' ? '#EF4444' : '#10B981';
+        } else {
+          badge.textContent = 'Not Configured (Local SQLite)';
+          badge.className = 'status-pill blocked';
+          badge.style.background = 'rgba(245, 158, 11, 0.1)';
+          badge.style.color = '#D97706';
+        }
+
+        if (s.gist_id) {
+          gistIdDisplay.innerHTML = `<a href="https://gist.github.com/${s.gist_id}" target="_blank" style="color: #0071E3; text-decoration: underline;">${s.gist_id}</a>`;
+        } else {
+          gistIdDisplay.textContent = 'Auto-assigned on first sync';
+        }
+
+        if (s.last_sync_time) {
+          const d = new Date(s.last_sync_time * 1000);
+          lastSyncDisplay.textContent = d.toLocaleTimeString() + ' (' + d.toLocaleDateString() + ')';
+        } else {
+          lastSyncDisplay.textContent = 'Never';
+        }
+      }
+    } catch (e) {
+      console.error('Error loading gist sync status', e);
+    }
+  }
+
+  document.getElementById('btn-gist-sync-now').onclick = async () => {
+    const btn = document.getElementById('btn-gist-sync-now');
+    btn.disabled = true;
+    btn.textContent = 'Pushing to Gist...';
+    try {
+      const res = await fetch('/api/admin/gist-sync/backup', { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Database successfully backed up to GitHub Gist!');
+      } else {
+        showToast(data.sync?.last_error || 'Gist backup failed. Check GITHUB_SYNC_TOKEN.', 'error');
+      }
+    } catch (e) {
+      showToast('Error syncing to Gist', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Sync Now (Push to Gist)`;
+      await loadGistSyncStatus();
+    }
+  };
+
+  document.getElementById('btn-gist-restore-now').onclick = async () => {
+    if (!confirm('Are you sure you want to pull and restore the latest database from GitHub Gist?')) return;
+    const btn = document.getElementById('btn-gist-restore-now');
+    btn.disabled = true;
+    btn.textContent = 'Pulling from Gist...';
+    try {
+      const res = await fetch('/api/admin/gist-sync/restore', { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Database restored from GitHub Gist!');
+        await loadStats();
+        await loadUsers();
+        await loadInstitutions();
+      } else {
+        showToast(data.sync?.last_error || 'Gist restore failed.', 'error');
+      }
+    } catch (e) {
+      showToast('Error restoring from Gist', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Restore Now (Pull from Gist)`;
+      await loadGistSyncStatus();
+    }
+  };
+
+  // Restore .db file upload
+  const dbFileInput = document.getElementById('db-file-input');
+  document.getElementById('btn-select-db-file').onclick = () => dbFileInput.click();
+  dbFileInput.onchange = async () => {
+    const file = dbFileInput.files[0];
+    if (!file) return;
+    if (!confirm(`Are you sure you want to restore "${file.name}"? This will overwrite the current database.`)) {
+      dbFileInput.value = '';
+      return;
+    }
+    const formData = new FormData();
+    formData.append('db_file', file);
+    try {
+      showToast('Uploading & restoring database...');
+      const res = await fetch('/api/admin/maintenance/restore-db', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Database restored successfully from file!');
+        await loadStats();
+        await loadUsers();
+        await loadInstitutions();
+        await loadGistSyncStatus();
+      } else {
+        showToast(data.error || 'Restore failed', 'error');
+      }
+    } catch (e) {
+      showToast('Error uploading database file', 'error');
+    } finally {
+      dbFileInput.value = '';
+    }
+  };
+
   // Search Listeners
   document.getElementById('users-search').addEventListener('input', renderUsersTable);
   document.getElementById('institutions-search').addEventListener('input', renderInstitutionsTable);
@@ -1935,6 +2103,7 @@
     await loadStats();
     await loadInstitutions();
     await loadUsers();
+    await loadGistSyncStatus();
     showToast('Dashboard data refreshed');
   });
 
@@ -1958,6 +2127,7 @@
   window.addEventListener('DOMContentLoaded', () => {
     loadStats();
     loadInstitutions();
+    loadGistSyncStatus();
   });
 </script>
 </body>

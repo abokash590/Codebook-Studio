@@ -23,6 +23,12 @@ try:
         migrate_guest_data_to_user,
         get_or_create_oauth_user,
     )
+    from backend.gist_sync import (
+        restore_db_from_gist,
+        schedule_gist_sync,
+        backup_db_to_gist_now,
+        get_sync_status,
+    )
 except ImportError:
     from db import get_db, init_db, purge_expired_trash
     from pdf_builder import build_codebook_pdf, build_pdf_from_html
@@ -34,6 +40,12 @@ except ImportError:
         init_user_starter_pack,
         migrate_guest_data_to_user,
         get_or_create_oauth_user,
+    )
+    from gist_sync import (
+        restore_db_from_gist,
+        schedule_gist_sync,
+        backup_db_to_gist_now,
+        get_sync_status,
     )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -57,7 +69,26 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 app.secret_key = os.environ.get("SECRET_KEY", "codebook-studio-secret-987123456")
+
+# Attempt restoring persistent SQLite database from GitHub Gist before initializing
+try:
+    restore_db_from_gist()
+except Exception as _e:
+    app.logger.warning(f"Gist restore failed on boot: {_e}")
+
 init_db()
+
+
+@app.after_request
+def _trigger_gist_sync_on_write(response):
+    """Automatically debounce-sync database to GitHub Gist whenever state is mutated."""
+    try:
+        if request.method in ("POST", "PUT", "DELETE", "PATCH") and response.status_code < 400:
+            if not request.path.startswith("/api/admin/gist-sync"):
+                schedule_gist_sync(delay_seconds=4.0)
+    except Exception:
+        pass
+    return response
 
 
 def get_active_user_id() -> str:
@@ -1441,6 +1472,44 @@ def api_admin_purge_trash():
     conn.commit()
     conn.close()
     return jsonify({"ok": True, "purged_snippets": s_del, "purged_topics": t_del})
+
+
+@app.route("/api/admin/gist-sync/status")
+@admin_required
+def api_admin_gist_sync_status():
+    return jsonify({"ok": True, "sync": get_sync_status()})
+
+
+@app.route("/api/admin/gist-sync/backup", methods=["POST"])
+@admin_required
+def api_admin_gist_sync_backup():
+    success = backup_db_to_gist_now()
+    return jsonify({"ok": success, "sync": get_sync_status()})
+
+
+@app.route("/api/admin/gist-sync/restore", methods=["POST"])
+@admin_required
+def api_admin_gist_sync_restore():
+    success = restore_db_from_gist()
+    if success:
+        init_db()
+    return jsonify({"ok": success, "sync": get_sync_status()})
+
+
+@app.route("/api/admin/maintenance/restore-db", methods=["POST"])
+@admin_required
+def api_admin_restore_db():
+    if "db_file" not in request.files:
+        return jsonify({"ok": False, "error": "No database file provided."}), 400
+    f = request.files["db_file"]
+    if not f.filename.endswith(".db"):
+        return jsonify({"ok": False, "error": "Invalid file type. Please upload a .db file."}), 400
+    db_file = BACKEND_DIR / "data" / "codebook.db"
+    db_file.parent.mkdir(parents=True, exist_ok=True)
+    f.save(str(db_file))
+    init_db()
+    schedule_gist_sync(delay_seconds=1.0)
+    return jsonify({"ok": True, "message": "Database restored successfully."})
 
 
 @app.errorhandler(404)
