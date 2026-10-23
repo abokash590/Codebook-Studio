@@ -232,6 +232,8 @@ function renderAuthNav(authData) {
         adminDivider.style.display = "none";
       }
     }
+    const nudge = $("nav-cloud-nudge");
+    if (nudge) nudge.style.display = "none";
   } else {
     if (authGroup) authGroup.style.display = "inline-flex";
     if (loginBtn) loginBtn.style.display = "inline-flex";
@@ -240,6 +242,12 @@ function renderAuthNav(authData) {
     if (userDropdown) userDropdown.style.display = "none";
     if (adminLink) adminLink.style.display = "none";
     if (adminDivider) adminDivider.style.display = "none";
+
+    const nudge = $("nav-cloud-nudge");
+    if (nudge) {
+      const isDismissed = sessionStorage.getItem("cloud_nudge_dismissed") === "1";
+      nudge.style.display = isDismissed ? "none" : "flex";
+    }
   }
 }
 
@@ -503,6 +511,33 @@ function initAuth() {
       }
     }
   });
+
+  initCloudSaveNudge();
+}
+
+function initCloudSaveNudge() {
+  const nudge = $("nav-cloud-nudge");
+  const dismissBtn = $("nudge-dismiss-btn");
+  const content = $("nudge-trigger-signup");
+  if (!nudge) return;
+
+  if (dismissBtn) {
+    dismissBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      nudge.classList.add("is-dismissing");
+      setTimeout(() => {
+        nudge.style.display = "none";
+        nudge.classList.remove("is-dismissing");
+        sessionStorage.setItem("cloud_nudge_dismissed", "1");
+      }, 200);
+    });
+  }
+
+  if (content) {
+    content.addEventListener("click", () => {
+      openAuthModal("register");
+    });
+  }
 }
 
 // ---------------- SIDEBAR ----------------

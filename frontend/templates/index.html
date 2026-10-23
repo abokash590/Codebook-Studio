@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Kalam:wght@400;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=220">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=230">
   <!-- CodeMirror: syntax-highlighted code editor with pro addons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
@@ -98,6 +98,28 @@
         </button>
         <button type="button" class="nav-auth-btn nav-signup-btn" id="nav-signup-btn" title="Create an account and save your codebook">
           <span>Sign Up</span>
+        </button>
+      </div>
+
+      <!-- Cloud Save Floating Nudge (Guest Prompt) -->
+      <div class="nav-cloud-nudge" id="nav-cloud-nudge" style="display: none;">
+        <div class="nudge-caret" aria-hidden="true"></div>
+        <div class="nudge-content" id="nudge-trigger-signup" title="Click to Sign Up">
+          <div class="nudge-icon-bubble">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+            </svg>
+          </div>
+          <div class="nudge-text-wrap">
+            <div class="nudge-title">Save to Cloud</div>
+            <div class="nudge-subtitle">Sign up free so your codebook is never lost!</div>
+          </div>
+        </div>
+        <button type="button" class="nudge-dismiss-btn" id="nudge-dismiss-btn" aria-label="Dismiss cloud prompt" title="Dismiss">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
         </button>
       </div>
 
@@ -1049,6 +1071,6 @@
   </button>
 </nav>
 
-<script src="{{ url_for('static', filename='app.js') }}?v=220"></script>
+<script src="{{ url_for('static', filename='app.js') }}?v=230"></script>
 </body>
 </html>
