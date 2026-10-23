@@ -633,21 +633,28 @@ body {{ font-family: 'Inter', sans-serif; color: #2C2C2A; margin: 0; }}
 .cover-frame .cover-team {{ margin-top: 2mm; }}
 .cover-frame-rule {{ width: 18mm; height: 1px; background: {accent_color}; opacity: 0.5; }}
 
-/* ---- terminal -- was a full dark-background page (very expensive to
-   print); now a bordered "code window" mockup on plain white, same
-   personality with almost no ink beyond thin lines and small text ---- */
-.cover-terminal {{ padding-top: 60mm; }}
-.cover-term-window {{ border: 1pt solid #D8D6D0; border-radius: 3mm; overflow: hidden; }}
-.cover-term-titlebar {{ background: #F5F4EF; padding: 3mm 4mm; display: flex; gap: 2mm; border-bottom: 1pt solid #D8D6D0; }}
-.cover-term-btn {{ width: 2.6mm; height: 2.6mm; border-radius: 50%; display: inline-block; background: {accent_color}; opacity: 0.55; }}
-.cover-term-btn:nth-child(2) {{ opacity: 0.35; }}
-.cover-term-btn:nth-child(3) {{ opacity: 0.2; }}
-.cover-term-body {{ padding: 9mm 8mm; font-family: 'JetBrains Mono', monospace; }}
-.cover-term-prompt-sym {{ color: {accent_color}; margin-right: 2mm; font-weight: 700; }}
-.cover-term-line {{ font-size: 11px; color: #6B6A66; margin: 0 0 2mm; }}
-.cover-term-out {{ color: #1C1C1C; padding-left: 5mm; margin-bottom: 5mm; }}
-.cover-term-title-out {{ font-size: 16px; font-weight: 700; color: {accent_color}; }}
-.cover-term-cursor {{ color: {accent_color}; }}
+/* ---- terminal -- macOS crisp light theme window ---- */
+.cover-terminal {{ padding: 35mm 15mm 0; }}
+.cover-term-window {{ background: #FFFFFF; border: 1.2pt solid #E4E4E7; border-radius: 3.5mm; overflow: hidden; }}
+.cover-term-titlebar {{ background: #F4F4F5; padding: 2.8mm 4mm; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.2pt solid #E4E4E7; }}
+.cover-term-traffic {{ display: flex; gap: 2mm; align-items: center; }}
+.cover-term-btn {{ width: 2.8mm; height: 2.8mm; border-radius: 50%; display: inline-block; }}
+.cover-term-btn-red {{ background: #FF5F56; }}
+.cover-term-btn-yellow {{ background: #FFBD2E; }}
+.cover-term-btn-green {{ background: #27C93F; }}
+.cover-term-tab {{ font-size: 8.5pt; font-weight: 600; color: #52525B; font-family: 'JetBrains Mono', monospace; }}
+.cover-term-session {{ font-size: 7.5pt; color: #71717A; font-family: 'JetBrains Mono', monospace; }}
+.cover-term-body {{ padding: 8mm 7mm 10mm; font-family: 'JetBrains Mono', monospace; background: #FFFFFF; color: #18181B; }}
+.cover-term-row {{ margin: 0 0 1.5mm; font-size: 9pt; }}
+.cover-term-prompt {{ color: {accent_color}; font-weight: 700; margin-right: 2mm; }}
+.cover-term-cmd {{ color: #0F172A; font-weight: 600; }}
+.cover-term-out {{ padding-left: 4mm; margin: 0 0 3.5mm; font-size: 9pt; }}
+.cover-term-title-highlight {{ font-size: 15pt; font-weight: 800; color: #09090B; letter-spacing: -0.3px; margin: 1mm 0 3.5mm; }}
+.cover-term-inst-out {{ color: {accent_color}; font-weight: 600; font-size: 10pt; }}
+.cover-term-team-out {{ color: #16A34A; font-weight: 700; font-size: 10.5pt; }}
+.cover-term-success {{ color: #52525B; font-size: 8.5pt; font-weight: 500; }}
+.cover-term-success span {{ color: #16A34A; font-weight: 800; }}
+.cover-term-cursor {{ color: {accent_color}; font-weight: 700; }}
 
 /* ---- geometric -- was a large 90mm solid triangle; now a small corner
    mark (~90% less ink) plus a short rule for the same graphic energy ---- */
