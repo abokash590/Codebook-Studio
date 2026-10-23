@@ -3675,15 +3675,56 @@ function onPrintPdf() {
 }
 
 function directBrowserPrint() {
-  // If in editor mode, switch to preview mode first so pages are visible to print
-  if (state && state.canvasMode === "editor") {
-    switchCanvasMode("preview");
+  if (canvasViewMode !== "preview") {
+    setCanvasMode("preview");
   }
-  setStatus("Opening browser print dialog... Choose 'Save as PDF' to save immediately.", "info");
-  setTimeout(() => {
-    window.print();
-  }, 200);
+
+  // Clear any existing toasts so they never get captured into the PDF
+  const toastContainer = $("toast-container");
+  if (toastContainer) {
+    toastContainer.innerHTML = "";
+  }
+  const statusMsg = $("status-msg");
+  if (statusMsg) {
+    statusMsg.textContent = "";
+  }
+
+  const scroll = $("preview-scroll");
+  const origZoom = scroll ? (scroll.style.zoom || currentZoom || 1) : 1;
+  if (scroll) {
+    scroll.style.zoom = "1";
+  }
+
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => {
+        if (scroll) scroll.style.zoom = origZoom;
+      }, 600);
+    }, 40);
+  });
 }
+
+window.addEventListener("beforeprint", () => {
+  if (canvasViewMode !== "preview") {
+    setCanvasMode("preview");
+  }
+  const toastContainer = $("toast-container");
+  if (toastContainer) {
+    toastContainer.innerHTML = "";
+  }
+  const scroll = $("preview-scroll");
+  if (scroll) {
+    scroll.style.zoom = "1";
+  }
+});
+
+window.addEventListener("afterprint", () => {
+  const scroll = $("preview-scroll");
+  if (scroll && typeof currentZoom !== "undefined") {
+    scroll.style.zoom = currentZoom;
+  }
+});
 
 async function buildPdf() {
   if (actionHubState === "building") return;

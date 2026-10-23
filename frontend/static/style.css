@@ -5538,59 +5538,149 @@ pre.card-code, pre.boilerplate-code {
 }
 
 @media print {
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
-  }
-  /* Hide everything except the pages themselves */
+  /* 1. Global Reset for Print Engine */
   html, body {
-    background: white !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
-    overflow: visible !important;
-    position: static !important;
-  }
-  .craft-navbar, .sidebar, .thumbnails-rail, .sidebar-toggle-btn, .rail-toggle-btn, .modal-backdrop, .color-popover, .canvas-dock, .card-hover-launcher, .hover-launcher-left, .hover-launcher-right, .command-palette-trigger-btn, .cmd-palette-backdrop { display: none !important; }
-  .app, .preview-area, .preview-scroll {
-    display: block !important;
-    background: transparent !important;
-    overflow: visible !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    width: auto !important;
-    padding: 0 !important;
     margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
     position: static !important;
   }
 
+  /* 2. Completely eliminate heavy filters/effects that cause Chrome's print engine to hang */
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* 3. Hide ALL non-page UI elements and background graphic layers */
+  .craft-navbar,
+  .sidebar,
+  .thumbnails-rail,
+  .sidebar-toggle-btn,
+  .rail-toggle-btn,
+  .modal-backdrop,
+  .color-popover,
+  .canvas-dock,
+  .card-hover-launcher,
+  .hover-launcher-left,
+  .hover-launcher-right,
+  .command-palette-trigger-btn,
+  .cmd-palette-backdrop,
+  .editor-canvas,
+  .editor-arrow-bridge-system,
+  .preview-sky-atmosphere,
+  .sky-cloud,
+  .nav-panels-toggle-group,
+  .nav-instant-print-btn,
+  .build-export-pill-btn,
+  .auth-modal,
+  .auth-backdrop,
+  .toast-container,
+  #toast-container,
+  .glass-toast,
+  .status-msg,
+  #status-msg,
+  .tooltip,
+  .nav-auth-btn,
+  .nav-user-pill,
+  .dock-segmented-control,
+  .dock-budget,
+  .dock-zoom-group {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* 4. Reset layout containers and force zoom to 1.0 (prevents pagination recalculation loop) */
+  .app,
+  .preview-area,
+  .preview-scroll {
+    display: block !important;
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    transform: none !important;
+    zoom: 1 !important;
+  }
+
+  .preview-area::before,
+  .preview-area::after,
+  .preview-sky-atmosphere::after {
+    display: none !important;
+    background: none !important;
+  }
+
+  /* 5. Clean, fast A4 page geometry */
   .a4-page {
     width: 210mm !important;
     min-height: 297mm !important;
     height: 297mm !important;
-    margin: 0 !important;
+    max-height: 297mm !important;
+    margin: 0 auto !important;
     padding: 14mm !important;
+    box-sizing: border-box !important;
+    background: #FFFFFF !important;
     box-shadow: none !important;
+    border: none !important;
     border-radius: 0 !important;
-    page-break-after: always !important;
-    break-after: page !important;
     overflow: hidden !important;
     position: relative !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    transform: none !important;
+    zoom: 1 !important;
   }
 
-  /* Last page should not force another blank page */
+  /* Exact colors only for the pages and their contents (fast style resolution) */
+  .a4-page,
+  .a4-page * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Last page avoids trailing blank page */
   .a4-page:last-child {
     page-break-after: avoid !important;
     break-after: avoid !important;
   }
 
-  /* Keep page numbers and header positioned correctly */
-  .a4-page .page-number { position: absolute; top: 8mm; right: 12mm; }
-  .page-header-left { position: absolute; top: 8mm; left: 12mm; }
+  /* Positioning header and page numbers */
+  .a4-page .page-number {
+    position: absolute;
+    top: 8mm;
+    right: 12mm;
+  }
+  .page-header-left {
+    position: absolute;
+    top: 8mm;
+    left: 12mm;
+  }
 }
 
 /* ==========================================================================
