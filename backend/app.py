@@ -99,6 +99,7 @@ def build_formulas_json(raw_formulas, kind="code"):
 
 # ---------- Health Check (Keep-Alive for Render / Monitoring) ----------
 
+@app.route("/health")
 @app.route("/api/health")
 def api_health():
     return jsonify({"status": "ok", "timestamp": int(time.time())})
