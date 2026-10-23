@@ -3674,7 +3674,7 @@ function onPrintPdf() {
   setStatus("Saved to local storage (Downloads).", "success");
 }
 
-function directBrowserPrint() {
+async function directBrowserPrint() {
   if (canvasViewMode !== "preview") {
     setCanvasMode("preview");
   }
@@ -3689,20 +3689,44 @@ function directBrowserPrint() {
     statusMsg.textContent = "";
   }
 
-  const scroll = $("preview-scroll");
-  const origZoom = scroll ? (scroll.style.zoom || currentZoom || 1) : 1;
-  if (scroll) {
-    scroll.style.zoom = "1";
-  }
+  // Remove previous print iframe if existing
+  let iframe = document.getElementById("print-isolated-iframe");
+  if (iframe) iframe.remove();
 
-  requestAnimationFrame(() => {
+  // Create isolated sandbox iframe (isolates the 24 A4 pages from 50,000 main-window UI elements)
+  iframe = document.createElement("iframe");
+  iframe.id = "print-isolated-iframe";
+  iframe.style.position = "fixed";
+  iframe.style.top = "-9999px";
+  iframe.style.left = "-9999px";
+  iframe.style.width = "210mm";
+  iframe.style.height = "297mm";
+  iframe.style.border = "none";
+  iframe.style.visibility = "hidden";
+  document.body.appendChild(iframe);
+
+  try {
+    const { html } = await buildPreviewHtml();
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    // Trigger print specifically on the lightweight isolated document (loads in <1s)
     setTimeout(() => {
-      window.print();
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (e) {
+        window.print();
+      }
       setTimeout(() => {
-        if (scroll) scroll.style.zoom = origZoom;
-      }, 600);
-    }, 40);
-  });
+        if (iframe && iframe.parentNode) iframe.remove();
+      }, 30000);
+    }, 120);
+  } catch (err) {
+    window.print();
+  }
 }
 
 window.addEventListener("beforeprint", () => {
