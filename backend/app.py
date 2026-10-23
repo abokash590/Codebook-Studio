@@ -866,6 +866,60 @@ def admin_required(f):
 
 # ---------- Build / download ----------
 
+@app.route("/api/track-export", methods=["POST"])
+def api_track_export():
+    """Track instantaneous PDF export events for university & team telemetry."""
+    body = request.json or {}
+    uid = get_active_user_id()
+    user_name = "Guest Visitor"
+    user_email = ""
+
+    conn = get_db()
+    if uid != "guest":
+        u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
+        if u_row:
+            user_name = u_row["name"]
+            user_email = u_row["email"]
+
+    # Fetch institution & team name from request body or database settings
+    inst_name = (body.get("institution_name") or "").strip()
+    team_name = (body.get("team_name") or "").strip()
+    page_count = int(body.get("page_count") or 1)
+
+    if not inst_name:
+        inst_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'institution_name'", (uid,)).fetchone()
+        if inst_row and inst_row["value"]:
+            inst_name = inst_row["value"].strip()
+
+    if not team_name:
+        team_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'team_name'", (uid,)).fetchone()
+        if team_row and team_row["value"]:
+            team_name = team_row["value"].strip()
+
+    now = int(time.time())
+    conn.execute(
+        """INSERT INTO build_logs
+           (user_id, user_name, user_email, institution_name, team_name, engine, page_count, render_duration_ms, status, error_message, created_at)
+           VALUES (?, ?, ?, ?, ?, 'instant-print', ?, 0, 'success', '', ?)""",
+        (uid, user_name, user_email, inst_name, team_name, page_count, now),
+    )
+
+    if inst_name:
+        clean_inst = re.sub(r'\s*\([^)]*\)', '', inst_name).strip()
+        conn.execute(
+            """UPDATE institutions
+               SET use_count = use_count + 1, last_used_at = ?
+               WHERE LOWER(name) = LOWER(?)
+                  OR LOWER(name) = LOWER(?)
+                  OR (short_name != '' AND LOWER(short_name) = LOWER(?))""",
+            (now, inst_name, clean_inst, inst_name),
+        )
+
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
 _pdf_build_lock = threading.Semaphore(1)
 
 @app.route("/api/build", methods=["POST"])

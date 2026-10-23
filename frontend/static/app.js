@@ -3726,65 +3726,40 @@ function onPrintPdf() {
 
 async function buildPdf() {
   if (actionHubState === "building") return;
-  setStatus("", "");
-  showBuildProgress("Preparing layouts...", 15);
-  let currentPct = 15;
+
+  // 1. Ensure user is on Book Preview so all .a4-page nodes exist in the DOM
+  if (typeof setAppTab === "function") {
+    setAppTab("preview");
+  }
+
+  // 2. Count live pages currently rendered
+  const pageNodes = document.querySelectorAll(".preview-scroll .a4-page");
+  const count = pageNodes.length || 1;
+
+  // 3. Immediately dispatch telemetry to backend (saves user, team, institution & use count)
+  const inst = (state.settings && state.settings.institution_name) || "";
+  const team = (state.settings && state.settings.team_name) || "";
 
   try {
-    updateBuildProgress("Rendering vector pages...", 35);
-
-    _progressInterval = setInterval(() => {
-      if (currentPct < 90) {
-        currentPct += Math.floor(Math.random() * 10) + 8;
-        const msg = currentPct < 65 ? "Typesetting pages..." : "Generating vector PDF...";
-        updateBuildProgress(msg, currentPct);
-      }
-    }, 180);
-
-    const controller = new AbortController();
-    const abortTimeout = setTimeout(() => controller.abort(), 75000); // 75s timeout to avoid worker hung
-
-    const res = await fetch("/api/build", {
+    fetch("/api/track-export", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-      signal: controller.signal,
-    });
-    clearTimeout(abortTimeout);
+      body: JSON.stringify({
+        page_count: count,
+        institution_name: inst,
+        team_name: team,
+      }),
+    }).catch(() => {});
+  } catch (_) {}
 
-    let data;
-    try {
-      const rawText = await res.text();
-      data = rawText ? JSON.parse(rawText) : { ok: false, error: "Server is warming up. Please try again in 5 seconds." };
-    } catch (_) {
-      data = { ok: false, error: `Server error (${res.status}). Please try again in a few moments.` };
-    }
+  // 4. Visual feedback on button & status
+  updateNavBuildExport("building", "Preparing Print...", 75);
 
-    if (data.ok) {
-      updatePageBudget(data.page_count);
-      finishBuildProgress(true, "PDF ready!");
-      if (data.over_limit) {
-        setStatus(`Built — ${data.page_count} pages (over 25-page limit). Ready to save!`, "warning");
-      } else {
-        setStatus(`Built — ${data.page_count} page${data.page_count !== 1 ? "s" : ""}. Ready to save!`, "success");
-      }
-    } else {
-      finishBuildProgress(false, "Build failed");
-      const errMsg = data.error || "Server render failed. Please try again.";
-      setStatus(errMsg, "error");
-      showToast(errMsg, "error");
-    }
-  } catch (err) {
-    finishBuildProgress(false, "Build unavailable");
-    const reason = err.name === "AbortError" ? "Build took too long. Please try again in a few moments." : (err.message || "Network error during PDF build");
-    setStatus(reason, "error");
-    showToast(reason, "error");
-  } finally {
-    if (_progressInterval) {
-      clearInterval(_progressInterval);
-      _progressInterval = null;
-    }
-  }
+  setTimeout(() => {
+    updateNavBuildExport("success", "PDF Ready!", 100);
+    window.print();
+    setStatus(`Export ready — ${count} page${count !== 1 ? "s" : ""}. Choose 'Save as PDF' in the print dialog.`, "success");
+  }, 100);
 }
 
 // ---------------- CANVAS DOCK (Studio Controls) ----------------
