@@ -5538,6 +5538,11 @@ pre.card-code, pre.boilerplate-code {
 }
 
 @media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
   /* Hide everything except the pages themselves */
   html, body {
     background: white !important;
@@ -5619,6 +5624,36 @@ pre.card-code, pre.boilerplate-code {
 .command-palette-trigger-btn:hover svg {
   color: var(--ui-ink);
 }
+
+.nav-instant-print-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-pill);
+  color: var(--ui-ink);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+.nav-instant-print-btn:hover {
+  background: #FFFFFF;
+  border-color: rgba(0, 0, 0, 0.18);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transform: translateY(-0.5px);
+}
+.nav-instant-print-btn svg {
+  color: var(--ui-muted);
+}
+.nav-instant-print-btn:hover svg {
+  color: var(--ui-ink);
+}
+
 .cmd-trigger-label {
   font-size: 12px;
   font-weight: 600;

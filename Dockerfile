@@ -46,5 +46,6 @@ RUN mkdir -p backend/data output && chmod -R 777 backend/data output
 
 EXPOSE 5050 10000
 
-# Run production WSGI server (Gunicorn) binding to dynamic $PORT
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5050} --workers 2 --threads 4 --timeout 120 app:app"]
+# Run production WSGI server (Gunicorn) with 1 worker to conserve RAM for Chromium on 512MB hosts
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5050} --workers 1 --threads 4 --timeout 120 app:app"]
+

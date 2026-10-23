@@ -2,6 +2,7 @@ import difflib
 import json
 import os
 import re
+import threading
 import time
 from functools import wraps
 from pathlib import Path
@@ -94,6 +95,13 @@ def build_formulas_json(raw_formulas, kind="code"):
         ok, img, error = render_formula(latex, **({"fontsize": fontsize} if fontsize else {}))
         out.append({"latex": latex, "img": img, "error": None if ok else error})
     return json.dumps(out)
+
+
+# ---------- Health Check (Keep-Alive for Render / Monitoring) ----------
+
+@app.route("/api/health")
+def api_health():
+    return jsonify({"status": "ok", "timestamp": int(time.time())})
 
 
 # ---------- Page & Assets ----------
@@ -850,77 +858,89 @@ def admin_required(f):
 
 # ---------- Build / download ----------
 
+_pdf_build_lock = threading.Semaphore(1)
+
 @app.route("/api/build", methods=["POST"])
 def api_build():
-    body = request.json or {}
-    t0 = time.time()
-    uid = get_active_user_id()
-    engine = "chrome" if body.get("html") else "weasyprint"
-    user_name = "Guest Visitor"
-    user_email = ""
-
-    conn = get_db()
-    if uid != "guest":
-        u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
-        if u_row:
-            user_name = u_row["name"]
-            user_email = u_row["email"]
-
-    # Fetch institution & team name from settings
-    inst_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'institution_name'", (uid,)).fetchone()
-    team_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'team_name'", (uid,)).fetchone()
-    inst_name = (inst_row["value"].strip() if inst_row and inst_row["value"] else "")
-    team_name = (team_row["value"].strip() if team_row and team_row["value"] else "")
+    # Only allow 1 Chrome PDF build at a time to prevent OOM crash on 512MB RAM hosts
+    if not _pdf_build_lock.acquire(blocking=False):
+        return jsonify({
+            "ok": False,
+            "error": "Server is busy rendering another PDF. Please wait 10 seconds or use Instant Browser Print."
+        }), 429
 
     try:
-        user_pdf_name = f"codebook_{uid}.pdf"
-        user_pdf_path = OUTPUT_DIR / user_pdf_name
+        body = request.json or {}
+        t0 = time.time()
+        uid = get_active_user_id()
+        engine = "chrome" if body.get("html") else "weasyprint"
+        user_name = "Guest Visitor"
+        user_email = ""
 
-        html_content = body.get("html")
-        if html_content:
-            (OUTPUT_DIR / f"last_build_{uid}.html").write_text(html_content, encoding="utf-8")
-            path = build_pdf_from_html(html_content, output_path=user_pdf_path)
-        else:
-            layout = body.get("layout")
-            path = build_codebook_pdf(layout=layout, user_id=uid, output_path=user_pdf_path)
+        conn = get_db()
+        if uid != "guest":
+            u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
+            if u_row:
+                user_name = u_row["name"]
+                user_email = u_row["email"]
 
-        session["last_build_file"] = user_pdf_name
+        # Fetch institution & team name from settings
+        inst_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'institution_name'", (uid,)).fetchone()
+        team_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'team_name'", (uid,)).fetchone()
+        inst_name = (inst_row["value"].strip() if inst_row and inst_row["value"] else "")
+        team_name = (team_row["value"].strip() if team_row and team_row["value"] else "")
 
-        from pypdf import PdfReader
-        page_count = len(PdfReader(str(path)).pages)
-        duration_ms = int((time.time() - t0) * 1000)
-
-        conn.execute(
-            """INSERT INTO build_logs
-               (user_id, user_name, user_email, institution_name, team_name, engine, page_count, render_duration_ms, status, error_message, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'success', '', ?)""",
-            (uid, user_name, user_email, inst_name, team_name, engine, page_count, duration_ms, int(time.time())),
-        )
-        if inst_name:
-            conn.execute("UPDATE institutions SET use_count = use_count + 1, last_used_at = ? WHERE LOWER(name) = LOWER(?)", (int(time.time()), inst_name))
-        conn.commit()
-        conn.close()
-
-        return jsonify({
-            "ok": True,
-            "page_count": page_count,
-            "over_limit": page_count > 25,
-            "duration_ms": duration_ms,
-        })
-    except Exception as e:
-        duration_ms = int((time.time() - t0) * 1000)
         try:
+            user_pdf_name = f"codebook_{uid}.pdf"
+            user_pdf_path = OUTPUT_DIR / user_pdf_name
+
+            html_content = body.get("html")
+            if html_content:
+                (OUTPUT_DIR / f"last_build_{uid}.html").write_text(html_content, encoding="utf-8")
+                path = build_pdf_from_html(html_content, output_path=user_pdf_path)
+            else:
+                layout = body.get("layout")
+                path = build_codebook_pdf(layout=layout, user_id=uid, output_path=user_pdf_path)
+
+            session["last_build_file"] = user_pdf_name
+
+            from pypdf import PdfReader
+            page_count = len(PdfReader(str(path)).pages)
+            duration_ms = int((time.time() - t0) * 1000)
+
             conn.execute(
                 """INSERT INTO build_logs
                    (user_id, user_name, user_email, institution_name, team_name, engine, page_count, render_duration_ms, status, error_message, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, 0, ?, 'failed', ?, ?)""",
-                (uid, user_name, user_email, inst_name, team_name, engine, duration_ms, str(e), int(time.time())),
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'success', '', ?)""",
+                (uid, user_name, user_email, inst_name, team_name, engine, page_count, duration_ms, int(time.time())),
             )
+            if inst_name:
+                conn.execute("UPDATE institutions SET use_count = use_count + 1, last_used_at = ? WHERE LOWER(name) = LOWER(?)", (int(time.time()), inst_name))
             conn.commit()
             conn.close()
-        except Exception:
-            pass
-        return jsonify({"ok": False, "error": str(e)}), 500
+
+            return jsonify({
+                "ok": True,
+                "page_count": page_count,
+                "over_limit": page_count > 25,
+                "duration_ms": duration_ms,
+            })
+        except Exception as e:
+            duration_ms = int((time.time() - t0) * 1000)
+            try:
+                conn.execute(
+                    """INSERT INTO build_logs
+                       (user_id, user_name, user_email, institution_name, team_name, engine, page_count, render_duration_ms, status, error_message, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, 0, ?, 'failed', ?, ?)""",
+                    (uid, user_name, user_email, inst_name, team_name, engine, duration_ms, str(e), int(time.time())),
+                )
+                conn.commit()
+                conn.close()
+            except Exception:
+                pass
+            return jsonify({"ok": False, "error": str(e)}), 500
+    finally:
+        _pdf_build_lock.release()
 
 
 @app.route("/download")

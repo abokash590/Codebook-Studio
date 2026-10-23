@@ -138,28 +138,38 @@ def build_pdf_from_html(html_content: str, output_path: Path | None = None) -> P
         html_path = Path(tmp_dir) / "preview.html"
         html_path.write_text(prepared_html, encoding="utf-8")
 
-        result = subprocess.run(
-            [
-                chrome,
-                "--headless=new",
-                "--no-sandbox",
-                "--disable-gpu",
-                "--disable-dev-shm-usage",
-                "--run-all-compositor-stages-before-draw",
-                "--disable-extensions",
-                f"--print-to-pdf={pdf_path}",
-                "--no-pdf-header-footer",
-                "--print-to-pdf-no-header",
-                str(html_path),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=120,
-        )
+        try:
+            result = subprocess.run(
+                [
+                    chrome,
+                    "--headless=new",
+                    "--no-sandbox",
+                    "--disable-gpu",
+                    "--disable-dev-shm-usage",
+                    "--single-process",
+                    "--no-zygote",
+                    "--disable-extensions",
+                    "--disable-software-rasterizer",
+                    "--disk-cache-size=1",
+                    "--media-cache-size=1",
+                    f"--print-to-pdf={pdf_path}",
+                    "--no-pdf-header-footer",
+                    "--print-to-pdf-no-header",
+                    str(html_path),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=90,
+            )
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(
+                "PDF generation timed out (90s limit). Please use Instant Browser Print or reduce page count."
+            )
 
     if not pdf_path.exists():
+        err_msg = result.stderr[:2000] if 'result' in locals() and result.stderr else "Process terminated or Out of Memory"
         raise RuntimeError(
-            f"Chrome failed to produce PDF.\nstderr: {result.stderr[:2000]}"
+            f"Chrome failed to produce PDF (likely memory limit reached).\nDetails: {err_msg}"
         )
 
     return pdf_path

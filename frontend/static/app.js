@@ -3674,6 +3674,17 @@ function onPrintPdf() {
   setStatus("Saved to local storage (Downloads).", "success");
 }
 
+function directBrowserPrint() {
+  // If in editor mode, switch to preview mode first so pages are visible to print
+  if (state && state.canvasMode === "editor") {
+    switchCanvasMode("preview");
+  }
+  setStatus("Opening browser print dialog... Choose 'Save as PDF' to save immediately.", "info");
+  setTimeout(() => {
+    window.print();
+  }, 200);
+}
+
 async function buildPdf() {
   if (actionHubState === "building") return;
   setStatus("", "");
@@ -3692,11 +3703,17 @@ async function buildPdf() {
       }
     }, 450);
 
+    const controller = new AbortController();
+    const abortTimeout = setTimeout(() => controller.abort(), 75000); // 75s timeout to avoid worker hung
+
     const res = await fetch("/api/build", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ html }),
+      signal: controller.signal,
     });
+    clearTimeout(abortTimeout);
+
     const data = await res.json();
     if (data.ok) {
       updatePageBudget(data.page_count);
@@ -3707,12 +3724,20 @@ async function buildPdf() {
         setStatus(`Built — ${data.page_count} page${data.page_count !== 1 ? "s" : ""}. Ready to save!`, "success");
       }
     } else {
-      finishBuildProgress(false, "Build failed");
-      setStatus("Build failed: " + data.error, "error");
+      finishBuildProgress(false, "Cloud build failed");
+      const errMsg = data.error || "Server render failed";
+      setStatus(errMsg + " — Opening Instant Browser Save (Print to PDF)...", "warning");
+      setTimeout(() => {
+        directBrowserPrint();
+      }, 1000);
     }
   } catch (err) {
-    finishBuildProgress(false, "Build failed");
-    setStatus("Build failed: " + err.message, "error");
+    finishBuildProgress(false, "Build unavailable");
+    const reason = err.name === "AbortError" ? "Server took too long" : (err.message || "Network error");
+    setStatus(reason + " — Opening Instant Browser Save (Print to PDF)...", "warning");
+    setTimeout(() => {
+      directBrowserPrint();
+    }, 1000);
   } finally {
     if (_progressInterval) {
       clearInterval(_progressInterval);
@@ -4617,10 +4642,19 @@ function buildCommandPaletteIndex() {
 
   // 3. Quick Actions & Commands
   items.push({
+    id: "action-instant-print",
+    type: "action",
+    title: "Instant Print / Save as PDF",
+    subtitle: "Browser native print (Ctrl+P) — 0 lag, works for 50+ pages, zero server RAM",
+    action: () => directBrowserPrint(),
+    icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>`,
+  });
+
+  items.push({
     id: "action-build",
     type: "action",
-    title: "Download PDF",
-    subtitle: "Compile competition-ready PDF with Chrome engine",
+    title: "Download PDF (Cloud Build)",
+    subtitle: "Compile competition-ready PDF with server engine",
     action: () => buildPdf(),
     icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2.5c.5 4 3 6.5 7.5 7.5-4 .5-6.5 3-7.5 7.5-.5-4-3-6.5-7.5-7.5 4-.5 6.5-3 7.5-7.5z"/></svg>`,
   });
@@ -5009,6 +5043,10 @@ document.addEventListener("DOMContentLoaded", () => {
   if (navBuildExport) {
     navBuildExport.addEventListener("click", buildPdf);
   }
+  const instantPrintBtn = $("nav-instant-print-btn");
+  if (instantPrintBtn) {
+    instantPrintBtn.addEventListener("click", directBrowserPrint);
+  }
   const buildBtn = $("build-btn");
   if (buildBtn) {
     buildBtn.addEventListener("click", buildPdf);
@@ -5362,6 +5400,11 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         openCommandPalette();
       }
+      return;
+    }
+    if (e.key.toLowerCase() === "p") {
+      e.preventDefault();
+      directBrowserPrint();
       return;
     }
     if (e.key === "s") {
