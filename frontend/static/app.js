@@ -178,7 +178,9 @@ async function loadState() {
 let currentAuthTab = "login";
 
 function renderAuthNav(authData) {
-  const authGroup = $("nav-auth-group") || $("nav-login-btn");
+  const authGroup = $("nav-auth-group");
+  const loginBtn = $("nav-login-btn");
+  const signupBtn = $("nav-signup-btn");
   const userPill = $("nav-user-pill");
   const userDropdown = $("nav-user-dropdown");
   const avatarBadge = $("user-avatar-badge");
@@ -188,9 +190,13 @@ function renderAuthNav(authData) {
   const adminLink = $("user-admin-link");
   const adminDivider = $("user-admin-divider");
 
-  if (authData && (authData.authenticated || authData.is_logged_in) && authData.user) {
+  const isLoggedIn = Boolean(authData && (authData.authenticated || authData.is_logged_in) && authData.user);
+
+  if (isLoggedIn) {
     const user = authData.user;
     if (authGroup) authGroup.style.display = "none";
+    if (loginBtn) loginBtn.style.display = "none";
+    if (signupBtn) signupBtn.style.display = "none";
     if (userPill) userPill.style.display = "inline-flex";
 
     const name = user.name || user.email.split("@")[0] || "User";
@@ -228,6 +234,8 @@ function renderAuthNav(authData) {
     }
   } else {
     if (authGroup) authGroup.style.display = "inline-flex";
+    if (loginBtn) loginBtn.style.display = "inline-flex";
+    if (signupBtn) signupBtn.style.display = "inline-flex";
     if (userPill) userPill.style.display = "none";
     if (userDropdown) userDropdown.style.display = "none";
     if (adminLink) adminLink.style.display = "none";

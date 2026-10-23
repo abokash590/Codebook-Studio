@@ -144,14 +144,14 @@ def build_pdf_from_html(html_content: str, output_path: Path | None = None) -> P
                     chrome,
                     "--headless=new",
                     "--no-sandbox",
-                    "--disable-gpu",
                     "--disable-dev-shm-usage",
-                    "--single-process",
-                    "--no-zygote",
+                    "--disable-gpu",
+                    "--no-proxy-server",
                     "--disable-extensions",
-                    "--disable-software-rasterizer",
-                    "--disk-cache-size=1",
-                    "--media-cache-size=1",
+                    "--disable-background-networking",
+                    "--disable-sync",
+                    "--no-first-run",
+                    "--disable-features=AudioServiceOutOfProcess,IsolateOrigins,site-per-process",
                     f"--print-to-pdf={pdf_path}",
                     "--no-pdf-header-footer",
                     "--print-to-pdf-no-header",
@@ -163,7 +163,7 @@ def build_pdf_from_html(html_content: str, output_path: Path | None = None) -> P
             )
         except subprocess.TimeoutExpired:
             raise RuntimeError(
-                "PDF generation timed out (90s limit). Please use Instant Browser Print or reduce page count."
+                "PDF generation timed out (90s limit)."
             )
 
     if not pdf_path.exists():

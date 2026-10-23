@@ -905,7 +905,12 @@ def api_build():
             html_content = body.get("html")
             if html_content:
                 (OUTPUT_DIR / f"last_build_{uid}.html").write_text(html_content, encoding="utf-8")
-                path = build_pdf_from_html(html_content, output_path=user_pdf_path)
+                try:
+                    path = build_pdf_from_html(html_content, output_path=user_pdf_path)
+                except Exception as chrome_err:
+                    print(f"Chrome PDF build warning: {chrome_err}. Falling back to internal engine...")
+                    path = build_codebook_pdf(user_id=uid, output_path=user_pdf_path)
+                    engine = "weasyprint"
             else:
                 layout = body.get("layout")
                 path = build_codebook_pdf(layout=layout, user_id=uid, output_path=user_pdf_path)
