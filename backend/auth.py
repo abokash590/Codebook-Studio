@@ -255,8 +255,8 @@ def get_or_create_oauth_user(conn, provider: str, provider_id: str, email: str, 
     )
     conn.commit()
 
-    # Seed starter pack
-    init_user_starter_pack(conn, user_id)
+    # Migrate in-progress guest topics/snippets/settings to new account, or seed starter pack
+    migrate_guest_data_to_user(conn, "guest", user_id)
 
     return {
         "id": user_id,
@@ -271,18 +271,86 @@ def get_or_create_oauth_user(conn, provider: str, provider_id: str, email: str, 
 
 
 def migrate_guest_data_to_user(conn, guest_id: str, user_id: str):
-    """Optionally migrate custom guest topics/snippets to the logged-in user account."""
-    if not guest_id or guest_id == user_id:
+    """
+    Copies guest's current customized topics, snippets, and settings
+    to a newly registered user account so that in-progress work is seamlessly retained.
+    Guest data is preserved for future anonymous visitors.
+    """
+    if not guest_id or not user_id or guest_id == user_id:
         return
 
-    # Check if guest has any topics
-    guest_topics = conn.execute("SELECT * FROM topics WHERE user_id = ? AND deleted_at IS NULL", (guest_id,)).fetchall()
+    # 1. If target user already has saved topics, do NOT overwrite their data
+    user_topics_count = conn.execute(
+        "SELECT COUNT(*) as c FROM topics WHERE user_id = ? AND deleted_at IS NULL",
+        (user_id,)
+    ).fetchone()["c"]
+    if user_topics_count > 0:
+        return
+
+    # 2. Check if guest has topics
+    guest_topics = conn.execute(
+        "SELECT * FROM topics WHERE user_id = ? AND deleted_at IS NULL ORDER BY sort_order",
+        (guest_id,)
+    ).fetchall()
+
     if not guest_topics:
+        # Fallback to standard starter pack
+        init_user_starter_pack(conn, user_id)
         return
 
-    # Update topics and snippets user_id
-    conn.execute("UPDATE topics SET user_id = ? WHERE user_id = ?", (user_id, guest_id))
-    conn.execute("UPDATE snippets SET user_id = ? WHERE user_id = ?", (user_id, guest_id))
-    conn.execute("UPDATE settings SET user_id = ? WHERE user_id = ?", (user_id, guest_id))
+    # 3. Copy topics with fresh user-scoped IDs
+    topic_id_map = {}
+    for t in guest_topics:
+        old_id = t["id"]
+        clean_tid = old_id.replace("guest_", "")
+        new_tid = f"{user_id}_{clean_tid}"
+        topic_id_map[old_id] = new_tid
+
+        conn.execute(
+            """INSERT OR REPLACE INTO topics (id, user_id, name, color, sort_order, deleted_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (new_tid, user_id, t["name"], t["color"], t["sort_order"], t["deleted_at"])
+        )
+
+    # 4. Copy snippets
+    guest_snippets = conn.execute(
+        "SELECT * FROM snippets WHERE user_id = ? AND deleted_at IS NULL ORDER BY sort_order",
+        (guest_id,)
+    ).fetchall()
+    for s in guest_snippets:
+        new_tid = topic_id_map.get(s["topic_id"], s["topic_id"])
+        conn.execute(
+            """INSERT INTO snippets
+               (user_id, title, subtitle, complexity, topic_id, sort_order, verified, tested_on, code, notes, formulas, language, kind, deleted_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                user_id,
+                s["title"],
+                s["subtitle"] or "",
+                s["complexity"] or "",
+                new_tid,
+                s["sort_order"],
+                s["verified"],
+                s["tested_on"] or "",
+                s["code"] or "",
+                s["notes"] or "",
+                s["formulas"] or "[]",
+                s["language"] or "cpp",
+                s["kind"] or "code",
+                s["deleted_at"]
+            )
+        )
+
+    # 5. Copy settings (book title, university/institution, team name, styles, boilerplate code)
+    guest_settings = conn.execute(
+        "SELECT key, value FROM settings WHERE user_id = ?",
+        (guest_id,)
+    ).fetchall()
+    for st in guest_settings:
+        conn.execute(
+            "INSERT OR REPLACE INTO settings (user_id, key, value) VALUES (?, ?, ?)",
+            (user_id, st["key"], st["value"])
+        )
+
     conn.commit()
 

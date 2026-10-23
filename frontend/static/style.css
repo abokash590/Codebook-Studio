@@ -5586,7 +5586,6 @@ pre.card-code, pre.boilerplate-code {
   .preview-sky-atmosphere,
   .sky-cloud,
   .nav-panels-toggle-group,
-  .nav-instant-print-btn,
   .build-export-pill-btn,
   .auth-modal,
   .auth-backdrop,
@@ -5718,34 +5717,6 @@ pre.card-code, pre.boilerplate-code {
   color: var(--ui-ink);
 }
 
-.nav-instant-print-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 12px;
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: var(--radius-pill);
-  color: var(--ui-ink);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  user-select: none;
-}
-.nav-instant-print-btn:hover {
-  background: #FFFFFF;
-  border-color: rgba(0, 0, 0, 0.18);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transform: translateY(-0.5px);
-}
-.nav-instant-print-btn svg {
-  color: var(--ui-muted);
-}
-.nav-instant-print-btn:hover svg {
-  color: var(--ui-ink);
-}
 
 .cmd-trigger-label {
   font-size: 12px;
@@ -6063,13 +6034,19 @@ pre.card-code, pre.boilerplate-code {
   align-items: center;
 }
 
-/* Nav Sign In Button */
+/* Nav Auth Buttons Group */
+.nav-auth-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .nav-auth-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 32px;
-  padding: 0 13px;
+  padding: 0 12px;
   font-family: inherit;
   font-size: 12px;
   font-weight: 550;
@@ -6090,6 +6067,20 @@ pre.card-code, pre.boilerplate-code {
 }
 .nav-auth-btn:active {
   transform: translateY(0);
+}
+
+.nav-auth-btn.nav-signup-btn {
+  background: #0284C7;
+  color: #FFFFFF;
+  border-color: #0284C7;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25);
+}
+.nav-auth-btn.nav-signup-btn:hover {
+  background: #0369A1;
+  border-color: #0369A1;
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
 }
 
 /* Nav User Avatar Pill (Circular Minimalist Icon) */

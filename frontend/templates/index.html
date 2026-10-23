@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Kalam:wght@400;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=160">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=170">
   <!-- CodeMirror: syntax-highlighted code editor with pro addons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
@@ -81,27 +81,24 @@
         </div>
         <span class="build-label" id="nav-build-export-text">Download PDF</span>
       </div>
-    <button type="button" class="nav-instant-print-btn" id="nav-instant-print-btn" title="Instant Print / Save as PDF (Zero server lag, works even for 50+ pages)">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="6 9 6 2 18 2 18 9"></polyline>
-        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-        <rect x="6" y="14" width="12" height="8"></rect>
-      </svg>
-      <span>Instant Print</span>
-    </button>
 
     <div class="nav-divider" aria-hidden="true"></div>
 
     <!-- User Auth & Profile Container -->
     <div class="nav-user-container" id="nav-user-container">
-      <!-- Unauthenticated State: Sign In Button -->
-      <button type="button" class="nav-auth-btn" id="nav-login-btn" title="Sign In or Create Account to save codebook">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-          <circle cx="12" cy="7" r="4"></circle>
-        </svg>
-        <span>Sign In</span>
-      </button>
+      <!-- Unauthenticated State: Sign In & Sign Up Buttons -->
+      <div class="nav-auth-group" id="nav-auth-group">
+        <button type="button" class="nav-auth-btn nav-signin-btn" id="nav-login-btn" title="Sign in to your account">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span>Sign In</span>
+        </button>
+        <button type="button" class="nav-auth-btn nav-signup-btn" id="nav-signup-btn" title="Create an account and save your codebook">
+          <span>Sign Up</span>
+        </button>
+      </div>
 
       <!-- Authenticated State: User Avatar & Dropdown -->
       <div class="nav-user-pill" id="nav-user-pill" style="display: none;" tabindex="0" role="button" aria-haspopup="true" aria-expanded="false" title="Account profile">
@@ -1051,6 +1048,6 @@
   </button>
 </nav>
 
-<script src="{{ url_for('static', filename='app.js') }}?v=160"></script>
+<script src="{{ url_for('static', filename='app.js') }}?v=170"></script>
 </body>
 </html>

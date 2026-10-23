@@ -178,7 +178,7 @@ async function loadState() {
 let currentAuthTab = "login";
 
 function renderAuthNav(authData) {
-  const loginBtn = $("nav-login-btn");
+  const authGroup = $("nav-auth-group") || $("nav-login-btn");
   const userPill = $("nav-user-pill");
   const userDropdown = $("nav-user-dropdown");
   const avatarBadge = $("user-avatar-badge");
@@ -190,7 +190,7 @@ function renderAuthNav(authData) {
 
   if (authData && (authData.authenticated || authData.is_logged_in) && authData.user) {
     const user = authData.user;
-    if (loginBtn) loginBtn.style.display = "none";
+    if (authGroup) authGroup.style.display = "none";
     if (userPill) userPill.style.display = "inline-flex";
 
     const name = user.name || user.email.split("@")[0] || "User";
@@ -227,7 +227,7 @@ function renderAuthNav(authData) {
       }
     }
   } else {
-    if (loginBtn) loginBtn.style.display = "inline-flex";
+    if (authGroup) authGroup.style.display = "inline-flex";
     if (userPill) userPill.style.display = "none";
     if (userDropdown) userDropdown.style.display = "none";
     if (adminLink) adminLink.style.display = "none";
@@ -403,6 +403,18 @@ function initAuth() {
     loginBtn.addEventListener("click", (e) => {
       if (e) e.preventDefault();
       openAuthModal("login");
+    });
+  }
+
+  const signupBtn = $("nav-signup-btn");
+  if (signupBtn) {
+    signupBtn.onclick = (e) => {
+      if (e) e.preventDefault();
+      openAuthModal("register");
+    };
+    signupBtn.addEventListener("click", (e) => {
+      if (e) e.preventDefault();
+      openAuthModal("register");
     });
   }
 
@@ -3316,9 +3328,21 @@ async function saveTemplateModal(e) {
   setStatus("Template page saved.", "success");
 }
 
-// ---------------- BOOK SETTINGS (auto-save on blur) ----------------
+// ---------------- BOOK SETTINGS (debounced autosave & immediate save on blur) ----------------
+
+let _settingsDebounceTimer = null;
+function scheduleSettingsSave(delayMs = 600) {
+  if (_settingsDebounceTimer) clearTimeout(_settingsDebounceTimer);
+  _settingsDebounceTimer = setTimeout(() => {
+    saveSettings();
+  }, delayMs);
+}
 
 async function saveSettings() {
+  if (_settingsDebounceTimer) {
+    clearTimeout(_settingsDebounceTimer);
+    _settingsDebounceTimer = null;
+  }
   state.settings.book_title = $("book-title").value;
   state.settings.institution_name = $("institution-name").value;
   state.settings.team_name = $("team-name").value;
@@ -3692,96 +3716,6 @@ function onPrintPdf() {
   setStatus("Saved to local storage (Downloads).", "success");
 }
 
-async function directBrowserPrint() {
-  if (canvasViewMode !== "preview") {
-    setCanvasMode("preview");
-  }
-
-  // Clear any existing toasts so they never get captured into the PDF
-  const toastContainer = $("toast-container");
-  if (toastContainer) {
-    toastContainer.innerHTML = "";
-  }
-  const statusMsg = $("status-msg");
-  if (statusMsg) {
-    statusMsg.textContent = "";
-  }
-
-  // Remove previous print iframe if existing
-  let iframe = document.getElementById("print-isolated-iframe");
-  if (iframe) iframe.remove();
-
-  // Create isolated sandbox iframe (isolates the 24 A4 pages from 50,000 main-window UI elements)
-  iframe = document.createElement("iframe");
-  iframe.id = "print-isolated-iframe";
-  iframe.style.position = "fixed";
-  iframe.style.top = "-9999px";
-  iframe.style.left = "-9999px";
-  iframe.style.width = "210mm";
-  iframe.style.height = "297mm";
-  iframe.style.border = "none";
-  iframe.style.visibility = "hidden";
-  document.body.appendChild(iframe);
-
-  try {
-    const { html } = await buildPreviewHtml();
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
-
-    // Ensure all typography Google Fonts are 100% loaded for ultra-crisp vector PDF quality
-    if (iframe.contentWindow.document.fonts && iframe.contentWindow.document.fonts.ready) {
-      try {
-        await Promise.race([
-          iframe.contentWindow.document.fonts.ready,
-          new Promise((resolve) => setTimeout(resolve, 800))
-        ]);
-      } catch (e) {}
-    }
-
-    // Trigger print specifically on the lightweight isolated document
-    setTimeout(() => {
-      try {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-      } catch (e) {
-        window.print();
-      }
-      setTimeout(() => {
-        if (iframe && iframe.parentNode) iframe.remove();
-      }, 30000);
-    }, 80);
-  } catch (err) {
-    window.print();
-  }
-}
-
-window.addEventListener("beforeprint", () => {
-  if (canvasViewMode !== "preview") {
-    setCanvasMode("preview");
-  }
-  const mobileNav = $("mobile-bottom-nav");
-  if (mobileNav) mobileNav.style.display = "none";
-  const toastContainer = $("toast-container");
-  if (toastContainer) {
-    toastContainer.innerHTML = "";
-  }
-  const scroll = $("preview-scroll");
-  if (scroll) {
-    scroll.style.zoom = "1";
-  }
-});
-
-window.addEventListener("afterprint", () => {
-  const mobileNav = $("mobile-bottom-nav");
-  if (mobileNav) mobileNav.style.display = "";
-  const scroll = $("preview-scroll");
-  if (scroll && typeof currentZoom !== "undefined") {
-    scroll.style.zoom = currentZoom;
-  }
-});
-
 async function buildPdf() {
   if (actionHubState === "building") return;
   setStatus("", "");
@@ -3821,20 +3755,16 @@ async function buildPdf() {
         setStatus(`Built — ${data.page_count} page${data.page_count !== 1 ? "s" : ""}. Ready to save!`, "success");
       }
     } else {
-      finishBuildProgress(false, "Cloud build failed");
-      const errMsg = data.error || "Server render failed";
-      setStatus(errMsg + " — Opening Instant Browser Save (Print to PDF)...", "warning");
-      setTimeout(() => {
-        directBrowserPrint();
-      }, 1000);
+      finishBuildProgress(false, "Build failed");
+      const errMsg = data.error || "Server render failed. Please try again.";
+      setStatus(errMsg, "error");
+      showToast(errMsg, "error");
     }
   } catch (err) {
     finishBuildProgress(false, "Build unavailable");
-    const reason = err.name === "AbortError" ? "Server took too long" : (err.message || "Network error");
-    setStatus(reason + " — Opening Instant Browser Save (Print to PDF)...", "warning");
-    setTimeout(() => {
-      directBrowserPrint();
-    }, 1000);
+    const reason = err.name === "AbortError" ? "Build took too long. Please try again in a few moments." : (err.message || "Network error during PDF build");
+    setStatus(reason, "error");
+    showToast(reason, "error");
   } finally {
     if (_progressInterval) {
       clearInterval(_progressInterval);
@@ -4304,6 +4234,7 @@ function initInstitutionAutocomplete() {
   if (!input || !dropdown) return;
 
   let activeIndex = -1;
+  let isSelecting = false;
 
   function renderDropdown(items, query = "") {
     dropdown.innerHTML = "";
@@ -4342,10 +4273,15 @@ function initInstitutionAutocomplete() {
         ${badgeHtml}
       `;
 
-      itemEl.addEventListener("mousedown", (e) => {
-        e.preventDefault();
+      const onSelect = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
         selectInstitution(displayTitle);
-      });
+      };
+      itemEl.addEventListener("mousedown", onSelect);
+      itemEl.addEventListener("click", onSelect);
 
       dropdown.appendChild(itemEl);
     });
@@ -4360,13 +4296,21 @@ function initInstitutionAutocomplete() {
   }
 
   function selectInstitution(name) {
+    isSelecting = true;
     input.value = name;
     dropdown.style.display = "none";
+    activeIndex = -1;
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
+    scheduleSettingsSave(50);
+    setTimeout(() => {
+      isSelecting = false;
+      dropdown.style.display = "none";
+    }, 120);
   }
 
   function filterAndShow(showAll = false) {
+    if (isSelecting) return;
     const query = input.value.trim().toLowerCase();
     if (!showAll && !query) {
       dropdown.style.display = "none";
@@ -4415,10 +4359,12 @@ function initInstitutionAutocomplete() {
   }
 
   input.addEventListener("input", () => {
+    if (isSelecting) return;
     filterAndShow(false);
   });
 
   input.addEventListener("focus", () => {
+    if (isSelecting) return;
     if (input.value.trim()) {
       filterAndShow(false);
     }
@@ -4739,19 +4685,10 @@ function buildCommandPaletteIndex() {
 
   // 3. Quick Actions & Commands
   items.push({
-    id: "action-instant-print",
-    type: "action",
-    title: "Instant Print / Save as PDF",
-    subtitle: "Browser native print (Ctrl+P) — 0 lag, works for 50+ pages, zero server RAM",
-    action: () => directBrowserPrint(),
-    icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>`,
-  });
-
-  items.push({
     id: "action-build",
     type: "action",
-    title: "Download PDF (Cloud Build)",
-    subtitle: "Compile competition-ready PDF with server engine",
+    title: "Download PDF",
+    subtitle: "Compile and download competition-ready PDF directly to your device (Ctrl+P)",
     action: () => buildPdf(),
     icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2.5c.5 4 3 6.5 7.5 7.5-4 .5-6.5 3-7.5 7.5-.5-4-3-6.5-7.5-7.5 4-.5 6.5-3 7.5-7.5z"/></svg>`,
   });
@@ -5029,6 +4966,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".page-header-left").forEach((el) => {
       el.textContent = [inst, team].filter(Boolean).join(" • ");
     });
+
+    scheduleSettingsSave(600);
   }
 
   ["book-title", "institution-name", "team-name"].forEach((id) => {
@@ -5139,10 +5078,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const navBuildExport = $("nav-build-export-btn");
   if (navBuildExport) {
     navBuildExport.addEventListener("click", buildPdf);
-  }
-  const instantPrintBtn = $("nav-instant-print-btn");
-  if (instantPrintBtn) {
-    instantPrintBtn.addEventListener("click", directBrowserPrint);
   }
   const buildBtn = $("build-btn");
   if (buildBtn) {
@@ -5501,7 +5436,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (e.key.toLowerCase() === "p") {
       e.preventDefault();
-      directBrowserPrint();
+      buildPdf();
       return;
     }
     if (e.key === "s") {

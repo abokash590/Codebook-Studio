@@ -166,8 +166,9 @@ def api_auth_register():
     conn = get_db()
     try:
         user = create_user(conn, email, password, name)
-        # Seed starter pack for new user
-        init_user_starter_pack(conn, user["id"])
+        # Migrate in-progress guest work to the new user account if available,
+        # otherwise seed standard starter pack
+        migrate_guest_data_to_user(conn, "guest", user["id"])
         session["user_id"] = user["id"]
         conn.close()
         return jsonify({"ok": True, "user": user})
@@ -807,7 +808,14 @@ def api_settings_update():
     if "institution_name" in d:
         inst_name = str(d["institution_name"]).strip()
         if inst_name and len(inst_name) >= 2:
-            existing = conn.execute("SELECT id, name, status, use_count FROM institutions WHERE LOWER(name) = LOWER(?)", (inst_name,)).fetchone()
+            clean_inst = re.sub(r'\s*\([^)]*\)', '', inst_name).strip()
+            existing = conn.execute(
+                """SELECT id, name, status, use_count FROM institutions
+                   WHERE LOWER(name) = LOWER(?)
+                      OR LOWER(name) = LOWER(?)
+                      OR (short_name != '' AND LOWER(short_name) = LOWER(?))""",
+                (inst_name, clean_inst, inst_name)
+            ).fetchone()
             now = int(time.time())
             if existing:
                 conn.execute("UPDATE institutions SET last_used_at = ? WHERE id = ?", (now, existing["id"]))
@@ -915,7 +923,15 @@ def api_build():
                 (uid, user_name, user_email, inst_name, team_name, engine, page_count, duration_ms, int(time.time())),
             )
             if inst_name:
-                conn.execute("UPDATE institutions SET use_count = use_count + 1, last_used_at = ? WHERE LOWER(name) = LOWER(?)", (int(time.time()), inst_name))
+                clean_inst = re.sub(r'\s*\([^)]*\)', '', inst_name).strip()
+                conn.execute(
+                    """UPDATE institutions
+                       SET use_count = use_count + 1, last_used_at = ?
+                       WHERE LOWER(name) = LOWER(?)
+                          OR LOWER(name) = LOWER(?)
+                          OR (short_name != '' AND LOWER(short_name) = LOWER(?))""",
+                    (int(time.time()), inst_name, clean_inst, inst_name)
+                )
             conn.commit()
             conn.close()
 
