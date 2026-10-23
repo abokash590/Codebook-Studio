@@ -3753,7 +3753,14 @@ async function buildPdf() {
     });
     clearTimeout(abortTimeout);
 
-    const data = await res.json();
+    let data;
+    try {
+      const rawText = await res.text();
+      data = rawText ? JSON.parse(rawText) : { ok: false, error: "Server is warming up. Please try again in 5 seconds." };
+    } catch (_) {
+      data = { ok: false, error: `Server error (${res.status}). Please try again in a few moments.` };
+    }
+
     if (data.ok) {
       updatePageBudget(data.page_count);
       finishBuildProgress(true, "PDF ready!");

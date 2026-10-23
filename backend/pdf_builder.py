@@ -1175,6 +1175,8 @@ def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = N
     direct API call), it falls back to letting WeasyPrint lay out each
     topic as one continuous multi-column flow, same as before.
     """
+    OUTPUT_DIR.mkdir(exist_ok=True)
+    pdf_path = output_path if output_path is not None else (OUTPUT_DIR / "codebook.pdf")
     conn = get_db()
     topics = conn.execute("SELECT * FROM topics WHERE user_id=? AND deleted_at IS NULL ORDER BY sort_order", (user_id,)).fetchall()
     settings = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings WHERE user_id=?", (user_id,))}
