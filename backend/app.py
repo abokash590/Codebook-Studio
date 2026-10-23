@@ -818,13 +818,38 @@ def api_settings_update():
             ).fetchone()
             now = int(time.time())
             if existing:
-                conn.execute("UPDATE institutions SET last_used_at = ? WHERE id = ?", (now, existing["id"]))
+                conn.execute(
+                    """UPDATE institutions
+                       SET use_count = use_count + 1, last_used_at = ?
+                       WHERE id = ?""",
+                    (now, existing["id"]),
+                )
+                recorded_name = existing["name"]
             else:
                 conn.execute(
                     """INSERT INTO institutions (name, short_name, status, use_count, suggested_by, created_at, last_used_at)
-                       VALUES (?, '', 'pending', 0, ?, ?, ?)""",
+                       VALUES (?, '', 'pending', 1, ?, ?, ?)""",
                     (inst_name, uid, now, now),
                 )
+                recorded_name = inst_name
+
+            team_val = str(d.get("team_name") or "").strip()
+            if not team_val:
+                t_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'team_name'", (uid,)).fetchone()
+                if t_row and t_row["value"]:
+                    team_val = t_row["value"].strip()
+
+            u_name = "Guest Visitor"
+            if uid != "guest":
+                u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
+                if u_row and u_row["name"]:
+                    u_name = u_row["name"]
+
+            conn.execute(
+                """INSERT INTO institution_logs (user_id, user_name, institution_name, team_name, action, created_at)
+                   VALUES (?, ?, ?, ?, 'type', ?)""",
+                (uid, u_name, recorded_name, team_val, now),
+            )
 
     conn.commit()
     conn.close()
@@ -913,6 +938,11 @@ def api_track_export():
                   OR LOWER(name) = LOWER(?)
                   OR (short_name != '' AND LOWER(short_name) = LOWER(?))""",
             (now, inst_name, clean_inst, inst_name),
+        )
+        conn.execute(
+            """INSERT INTO institution_logs (user_id, user_name, institution_name, team_name, action, created_at)
+               VALUES (?, ?, ?, ?, 'export', ?)""",
+            (uid, user_name, inst_name, team_name, now),
         )
 
     conn.commit()
@@ -1283,6 +1313,13 @@ def api_admin_institutions():
         d["teams"] = sorted(list(teams_by_inst.get(d["name"].strip().lower(), [])))
         institutions.append(d)
 
+    recent_logs = [dict(r) for r in conn.execute("""
+        SELECT id, user_name, institution_name, team_name, action, created_at
+        FROM institution_logs
+        ORDER BY id DESC
+        LIMIT 25
+    """).fetchall()]
+
     conn.close()
     return jsonify({
         "ok": True,
@@ -1290,6 +1327,7 @@ def api_admin_institutions():
         "pending_count": pending_count,
         "approved_count": approved_count,
         "institutions": institutions,
+        "recent_logs": recent_logs,
     })
 
 

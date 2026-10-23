@@ -45,6 +45,16 @@ CREATE TABLE IF NOT EXISTS institutions (
     last_used_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS institution_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL DEFAULT 'guest',
+    user_name TEXT DEFAULT '',
+    institution_name TEXT NOT NULL,
+    team_name TEXT DEFAULT '',
+    action TEXT NOT NULL DEFAULT 'type',
+    created_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS topics (
     id TEXT NOT NULL,
     user_id TEXT NOT NULL DEFAULT 'guest',
@@ -389,6 +399,18 @@ def _migrate(conn):
             conn.execute(col_sql)
         except sqlite3.OperationalError:
             pass
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS institution_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL DEFAULT 'guest',
+            user_name TEXT DEFAULT '',
+            institution_name TEXT NOT NULL,
+            team_name TEXT DEFAULT '',
+            action TEXT NOT NULL DEFAULT 'type',
+            created_at INTEGER NOT NULL
+        )
+    """)
     conn.commit()
 
 
