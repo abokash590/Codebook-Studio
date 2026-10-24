@@ -157,8 +157,53 @@ function setStatus(msg, kind) {
 }
 
 async function loadState() {
-  const res = await fetch("/api/state");
+  // Check for login_token from OAuth redirect
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const loginToken = urlParams.get("login_token");
+    if (loginToken) {
+      localStorage.setItem("codebook_auth_token", loginToken);
+      urlParams.delete("login_token");
+      const newQuery = urlParams.toString();
+      const cleanUrl = window.location.pathname + (newQuery ? "?" + newQuery : "") + (window.location.hash || "");
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  } catch (e) {}
+
+  const savedToken = localStorage.getItem("codebook_auth_token");
+  const headers = {};
+  if (savedToken) {
+    headers["Authorization"] = `Bearer ${savedToken}`;
+  }
+
+  const res = await fetch("/api/state", { headers });
   state = await res.json();
+
+  // If server provided a valid token, save it for future rehydration
+  if (state.auth && state.auth.token) {
+    localStorage.setItem("codebook_auth_token", state.auth.token);
+  }
+
+  // If client had a saved token but server returned guest, attempt explicit rehydration
+  if (savedToken && (!state.auth || !state.auth.is_logged_in)) {
+    try {
+      const rhRes = await fetch("/api/auth/rehydrate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: savedToken })
+      });
+      const rhData = await rhRes.json();
+      if (rhData.ok && rhData.user) {
+        localStorage.setItem("codebook_auth_token", rhData.token);
+        // Refresh full state with the newly rehydrated user session
+        const freshRes = await fetch("/api/state");
+        state = await freshRes.json();
+      } else {
+        localStorage.removeItem("codebook_auth_token");
+      }
+    } catch (e) {}
+  }
+
   if (!initialCollapseDone && state.topics && state.topics.length > 0) {
     state.topics.forEach((t) => collapsedTopics.add(t.id));
     initialCollapseDone = true;
@@ -380,6 +425,9 @@ async function handleAuthSubmit(e) {
     }
 
     closeAuthModal();
+    if (data.token) {
+      localStorage.setItem("codebook_auth_token", data.token);
+    }
     const userName = data.user && data.user.name ? data.user.name : "there";
     showToast(currentAuthTab === "register" ? `Welcome to Codebook, ${userName}!` : `Welcome back, ${userName}!`, "success");
     await loadState();
@@ -396,6 +444,7 @@ async function handleAuthSubmit(e) {
 
 async function handleLogout() {
   closeUserDropdown();
+  localStorage.removeItem("codebook_auth_token");
   try {
     const res = await fetch("/api/auth/logout", { method: "POST" });
     const data = await res.json();

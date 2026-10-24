@@ -1,4 +1,7 @@
+from datetime import timedelta
 import difflib
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -69,6 +72,30 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 app.secret_key = os.environ.get("SECRET_KEY", "codebook-studio-secret-987123456")
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=365)
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_NAME"] = "codebook_session"
+
+
+def generate_auth_token(user_id: str) -> str:
+    """Generate a cryptographic signed auth token for persistent client-side storage."""
+    sig = hmac.new(app.secret_key.encode("utf-8"), user_id.encode("utf-8"), hashlib.sha256).hexdigest()
+    return f"{user_id}:{sig}"
+
+
+def verify_auth_token(token: str) -> str | None:
+    """Verify cryptographic signed auth token and return the user_id if valid."""
+    if not token or ":" not in token:
+        return None
+    try:
+        user_id, sig = token.split(":", 1)
+        expected_sig = hmac.new(app.secret_key.encode("utf-8"), user_id.encode("utf-8"), hashlib.sha256).hexdigest()
+        if hmac.compare_digest(sig, expected_sig):
+            return user_id
+    except Exception:
+        return None
+    return None
 
 # Attempt restoring persistent SQLite database from GitHub Gist before initializing
 try:
@@ -100,8 +127,20 @@ def _trigger_gist_sync_on_write(response):
 
 
 def get_active_user_id() -> str:
-    """Return currently authenticated user ID, or 'guest' for unauthenticated users."""
-    return session.get("user_id") or "guest"
+    """Return currently authenticated user ID, or 'guest' for unauthenticated users.
+    Supports session cookie with automatic fallback & rehydration via Bearer token."""
+    uid = session.get("user_id")
+    if uid:
+        return uid
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+        verified_uid = verify_auth_token(token)
+        if verified_uid:
+            session.permanent = True
+            session["user_id"] = verified_uid
+            return verified_uid
+    return "guest"
 
 
 def row_to_dict(row):
@@ -194,7 +233,26 @@ def api_auth_me():
     if not user:
         session.pop("user_id", None)
         return jsonify({"is_logged_in": False, "user": None})
-    return jsonify({"is_logged_in": True, "user": user})
+    session.permanent = True
+    token = generate_auth_token(user["id"])
+    return jsonify({"is_logged_in": True, "user": user, "token": token})
+
+
+@app.route("/api/auth/rehydrate", methods=["POST"])
+def api_auth_rehydrate():
+    d = request.json or {}
+    token = d.get("token", "")
+    uid = verify_auth_token(token)
+    if not uid:
+        return jsonify({"ok": False, "error": "Invalid token"}), 401
+    conn = get_db()
+    user = get_user_by_id(conn, uid)
+    conn.close()
+    if not user:
+        return jsonify({"ok": False, "error": "User not found"}), 404
+    session.permanent = True
+    session["user_id"] = user["id"]
+    return jsonify({"ok": True, "user": user, "token": token})
 
 
 @app.route("/api/auth/register", methods=["POST"])
@@ -209,9 +267,11 @@ def api_auth_register():
         # Migrate in-progress guest work to the new user account if available,
         # otherwise seed standard starter pack
         migrate_guest_data_to_user(conn, "guest", user["id"])
+        session.permanent = True
         session["user_id"] = user["id"]
+        token = generate_auth_token(user["id"])
         conn.close()
-        return jsonify({"ok": True, "user": user})
+        return jsonify({"ok": True, "user": user, "token": token})
     except ValueError as e:
         conn.close()
         return jsonify({"ok": False, "error": str(e)}), 400
@@ -231,12 +291,15 @@ def api_auth_login():
     if not user:
         return jsonify({"ok": False, "error": "Invalid email or password."}), 401
 
+    session.permanent = True
     session["user_id"] = user["id"]
-    return jsonify({"ok": True, "user": user})
+    token = generate_auth_token(user["id"])
+    return jsonify({"ok": True, "user": user, "token": token})
 
 
 @app.route("/api/auth/logout", methods=["POST"])
 def api_auth_logout():
+    session.clear()
     session.pop("user_id", None)
     return jsonify({"ok": True})
 
@@ -310,8 +373,10 @@ def api_auth_github_login():
             avatar_url="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
         )
         conn.close()
+        session.permanent = True
         session["user_id"] = demo_user["id"]
-        return redirect("/?auth_success=1&provider=GitHub")
+        token = generate_auth_token(demo_user["id"])
+        return redirect(f"/?auth_success=1&provider=GitHub&login_token={token}")
 
     redirect_uri = _get_redirect_uri("/api/auth/github/callback")
     github_url = (
@@ -391,8 +456,10 @@ def api_auth_github_callback():
             avatar_url=gh_user.get("avatar_url", "")
         )
         conn.close()
+        session.permanent = True
         session["user_id"] = user["id"]
-        return redirect("/?auth_success=1&provider=GitHub")
+        token = generate_auth_token(user["id"])
+        return redirect(f"/?auth_success=1&provider=GitHub&login_token={token}")
     except Exception as e:
         print("GitHub OAuth error:", e)
         return redirect("/?auth_error=github_failed")
@@ -414,8 +481,10 @@ def api_auth_google_login():
             avatar_url=""
         )
         conn.close()
+        session.permanent = True
         session["user_id"] = demo_user["id"]
-        return redirect("/?auth_success=1&provider=Google")
+        token = generate_auth_token(demo_user["id"])
+        return redirect(f"/?auth_success=1&provider=Google&login_token={token}")
 
     redirect_uri = _get_redirect_uri("/api/auth/google/callback")
     params = {
@@ -469,8 +538,10 @@ def api_auth_google_callback():
             avatar_url=userinfo.get("picture", "")
         )
         conn.close()
+        session.permanent = True
         session["user_id"] = user["id"]
-        return redirect("/?auth_success=1&provider=Google")
+        token = generate_auth_token(user["id"])
+        return redirect(f"/?auth_success=1&provider=Google&login_token={token}")
     except Exception as e:
         print("Google OAuth error:", e)
         return redirect("/?auth_error=google_failed")
@@ -503,13 +574,15 @@ def api_state():
         from backend.db import DEFAULT_BOILERPLATE_CODE
         settings["boilerplate_code"] = DEFAULT_BOILERPLATE_CODE
     conn.close()
+    user_token = generate_auth_token(user_info["id"]) if user_info else ""
     return jsonify({
         "topics": topics,
         "settings": settings,
         "auth": {
             "is_logged_in": bool(user_info),
             "authenticated": bool(user_info),
-            "user": user_info
+            "user": user_info,
+            "token": user_token
         }
     })
 
