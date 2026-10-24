@@ -903,6 +903,50 @@ def api_trash_purge_snippet(snippet_id):
 
 # ---------- Settings ----------
 
+INSTITUTION_KEYWORDS = {
+    "university", "univ", "college", "institute", "institution", "engineering",
+    "polytechnic", "school", "academy", "medical", "campus", "varsity", "technology",
+    "science", "faculty", "center", "centre", "madrasah", "madrasa", "iit", "nit", "iiit"
+}
+
+
+def is_valid_new_institution_name(raw_name: str, conn) -> tuple[bool, str]:
+    """
+    Validates whether a typed institution name is a legitimate new institution proposal.
+    Rejects:
+    1. Short fragments (< 6 characters) e.g. 'my', 'dh', 'bu', 'du', 'test'
+    2. Strings that match the prefix of an existing approved university.
+       (e.g. 'my' while 'Mymensingh Engineering College' exists in DB)
+    3. Strings without at least 2 distinct words unless containing strong institutional keywords.
+    """
+    if not raw_name:
+        return False, "Empty name"
+    clean = re.sub(r'\s*\([^)]*\)', '', raw_name).strip()
+    if len(clean) < 6:
+        return False, "Too short (minimum 6 characters for new institution)"
+
+    clean_lower = clean.lower()
+
+    # Check if this input matches the prefix of any approved university
+    # e.g. 'my', 'mymen', 'dhaka' matches 'Dhaka University' -> do not create pending
+    prefix_match = conn.execute(
+        """SELECT id, name FROM institutions 
+           WHERE status = 'approved' 
+             AND (LOWER(name) LIKE ? OR (short_name != '' AND LOWER(short_name) LIKE ?))""",
+        (f"{clean_lower}%", f"{clean_lower}%")
+    ).fetchone()
+    if prefix_match:
+        return False, f"Matches prefix of existing institution: {prefix_match['name']}"
+
+    # Check if it contains multiple words or recognized institutional keywords
+    words = clean.split()
+    has_keyword = any(kw in clean_lower for kw in INSTITUTION_KEYWORDS)
+    if len(words) < 2 and not has_keyword:
+        return False, "Must contain at least 2 words or recognized institutional keyword"
+
+    return True, "Valid"
+
+
 @app.route("/api/settings", methods=["POST"])
 def api_settings_update():
     uid = get_active_user_id()
@@ -920,7 +964,7 @@ def api_settings_update():
     # Track university usage or register user-suggested custom institution
     if "institution_name" in d:
         inst_name = str(d["institution_name"]).strip()
-        if inst_name and len(inst_name) >= 2:
+        if inst_name:
             clean_inst = re.sub(r'\s*\([^)]*\)', '', inst_name).strip()
             existing = conn.execute(
                 """SELECT id, name, status, use_count FROM institutions
@@ -931,38 +975,63 @@ def api_settings_update():
             ).fetchone()
             now = int(time.time())
             if existing:
-                conn.execute(
-                    """UPDATE institutions
-                       SET use_count = use_count + 1, last_used_at = ?
-                       WHERE id = ?""",
-                    (now, existing["id"]),
-                )
-                recorded_name = existing["name"]
+                # Debounce use_count increment so rapid keystrokes don't over-inflate count
+                last_log = conn.execute(
+                    """SELECT created_at FROM institution_logs 
+                       WHERE user_id = ? AND institution_name = ?
+                       ORDER BY created_at DESC LIMIT 1""",
+                    (uid, existing["name"])
+                ).fetchone()
+                if not last_log or (now - last_log["created_at"]) > 900:
+                    conn.execute(
+                        """UPDATE institutions
+                           SET use_count = use_count + 1, last_used_at = ?
+                           WHERE id = ?""",
+                        (now, existing["id"]),
+                    )
+                    team_val = str(d.get("team_name") or "").strip()
+                    if not team_val:
+                        t_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'team_name'", (uid,)).fetchone()
+                        if t_row and t_row["value"]:
+                            team_val = t_row["value"].strip()
+
+                    u_name = "Guest Visitor"
+                    if uid != "guest":
+                        u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
+                        if u_row and u_row["name"]:
+                            u_name = u_row["name"]
+
+                    conn.execute(
+                        """INSERT INTO institution_logs (user_id, user_name, institution_name, team_name, action, created_at)
+                           VALUES (?, ?, ?, ?, 'select', ?)""",
+                        (uid, u_name, existing["name"], team_val, now),
+                    )
             else:
-                conn.execute(
-                    """INSERT INTO institutions (name, short_name, status, use_count, suggested_by, created_at, last_used_at)
-                       VALUES (?, '', 'pending', 1, ?, ?, ?)""",
-                    (inst_name, uid, now, now),
-                )
-                recorded_name = inst_name
+                # Only register a new pending suggestion if it is a VALID institution name AND NOT a prefix of existing universities
+                valid, reason = is_valid_new_institution_name(inst_name, conn)
+                if valid:
+                    conn.execute(
+                        """INSERT INTO institutions (name, short_name, status, use_count, suggested_by, created_at, last_used_at)
+                           VALUES (?, '', 'pending', 1, ?, ?, ?)""",
+                        (inst_name, uid, now, now),
+                    )
+                    team_val = str(d.get("team_name") or "").strip()
+                    if not team_val:
+                        t_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'team_name'", (uid,)).fetchone()
+                        if t_row and t_row["value"]:
+                            team_val = t_row["value"].strip()
 
-            team_val = str(d.get("team_name") or "").strip()
-            if not team_val:
-                t_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'team_name'", (uid,)).fetchone()
-                if t_row and t_row["value"]:
-                    team_val = t_row["value"].strip()
+                    u_name = "Guest Visitor"
+                    if uid != "guest":
+                        u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
+                        if u_row and u_row["name"]:
+                            u_name = u_row["name"]
 
-            u_name = "Guest Visitor"
-            if uid != "guest":
-                u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
-                if u_row and u_row["name"]:
-                    u_name = u_row["name"]
-
-            conn.execute(
-                """INSERT INTO institution_logs (user_id, user_name, institution_name, team_name, action, created_at)
-                   VALUES (?, ?, ?, ?, 'type', ?)""",
-                (uid, u_name, recorded_name, team_val, now),
-            )
+                    conn.execute(
+                        """INSERT INTO institution_logs (user_id, user_name, institution_name, team_name, action, created_at)
+                           VALUES (?, ?, ?, ?, 'suggest', ?)""",
+                        (uid, u_name, inst_name, team_val, now),
+                    )
 
     conn.commit()
     conn.close()

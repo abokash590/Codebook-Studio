@@ -411,6 +411,12 @@ def _migrate(conn):
             created_at INTEGER NOT NULL
         )
     """)
+    # Clean up any historic accidental partial-typed pending institutions (e.g. 'my', 'dh')
+    try:
+        conn.execute("DELETE FROM institutions WHERE status = 'pending' AND (length(name) < 6 OR name NOT LIKE '% %')")
+        conn.execute("DELETE FROM institution_logs WHERE length(institution_name) < 4")
+    except Exception:
+        pass
     conn.commit()
 
 
