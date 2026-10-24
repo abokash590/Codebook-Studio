@@ -320,6 +320,9 @@ def build_font_faces_css(code_font: str) -> str:
         _font_face("Inter", "Inter-Medium.woff2", "500"),
         _font_face("Inter", "Inter-SemiBold.woff2", "600"),
     ]
+    if (FONTS_DIR / "Gebuk-Regular.ttf").exists():
+        faces.append(_font_face("Gebuk", "Gebuk-Regular.ttf", "400"))
+        faces.append(_font_face("Gebuk", "Gebuk-Regular.ttf", "700"))
     regular_file, bold_file = CODE_FONT_FILES.get(code_font, CODE_FONT_FILES[DEFAULT_CODE_FONT])
     resolved_family = code_font if code_font in CODE_FONT_FILES else DEFAULT_CODE_FONT
     faces.append(_font_face(resolved_family, regular_file, "400"))
@@ -378,20 +381,41 @@ def _css_string(s: str) -> str:
     return (s or "").replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
 
 
-COVER_STYLES = ["minimal", "sketch", "banner", "frame", "terminal", "geometric"]
-DEFAULT_COVER_STYLE = "minimal"
+def _hex_to_rgba(hex_code: str, alpha: float) -> str:
+    h = (hex_code or "#0284C7").lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    try:
+        r = int(h[0:2], 16)
+        g = int(h[2:4], 16)
+        b = int(h[4:6], 16)
+        return f"rgba({r}, {g}, {b}, {alpha})"
+    except Exception:
+        return f"rgba(2, 132, 199, {alpha})"
+
+
+COVER_STYLES = ["sketch", "terminal", "blueprint", "banner", "frame", "geometric"]
+DEFAULT_COVER_STYLE = "sketch"
 
 
 def _cover_html(style: str, book_title: str, team_name: str, institution_name: str, accent_color: str = "currentColor") -> str:
-    """Five deliberately distinct cover-page layouts, picked in Settings.
-    Each returns its own markup (not just a CSS reskin of one template) so
-    they read as genuinely different books, not the same page recolored."""
+    """Distinct, tournament-grade cover-page layouts.
+    Each returns rich vector markup so they read as world-class reference books."""
+    if style == "minimal":
+        style = "sketch"
     style = style if style in COVER_STYLES else DEFAULT_COVER_STYLE
     title = escape_html(book_title)
     team = escape_html(team_name)
     inst = escape_html(institution_name)
     inst_html = f'<p class="cover-inst">{inst}</p>' if inst else ""
     team_html = f'<p class="cover-team">{team}</p>' if team else ""
+
+    accent = accent_color if accent_color and accent_color != "currentColor" else "#0284C7"
+    accent_bg = _hex_to_rgba(accent, 0.04)
+    accent_bg_sub = _hex_to_rgba(accent, 0.08)
+    accent_bg_subtle = _hex_to_rgba(accent, 0.03)
+    accent_dim = _hex_to_rgba(accent, 0.6)
+    accent_line = _hex_to_rgba(accent, 0.35)
 
     if style == "sketch":
         inst_block = f'<p class="cover-sketch-inst">{inst}</p>' if inst else ""
@@ -409,17 +433,14 @@ def _cover_html(style: str, book_title: str, team_name: str, institution_name: s
               <span class="csd csd-6">int main()</span>
               <span class="csd csd-7">&lt;&lt;</span>
               <span class="csd csd-8">return 0;</span>
-              <span class="csd csd-9">[ ]</span>
-              <span class="csd csd-10">==</span>
-              <span class="csd csd-11">O(n log n)</span>
+              <span class="csd csd-9">∑</span>
+              <span class="csd csd-10">O(n log n)</span>
+              <span class="csd csd-11">∫</span>
               <span class="csd csd-12">nullptr</span>
+              <span class="csd csd-13">matrix[N][N]</span>
+              <span class="csd csd-14">λ</span>
             </div>
             <div class="cover-sketch-body">
-              <div class="cover-sketch-eyebrow">
-                <span>VOL. I</span>
-                <span class="cover-sketch-eyebrow-sep">•</span>
-                <span>ALGORITHMIC COMPENDIUM</span>
-              </div>
               <h1 class="cover-sketch-title">{title}</h1>
               <div class="cover-sketch-rule-row">
                 <span class="csk-line"></span>
@@ -430,7 +451,165 @@ def _cover_html(style: str, book_title: str, team_name: str, institution_name: s
                 {inst_block}
                 {team_block}
               </div>
-              <div class="cover-sketch-footer">COMPILED FOR ICPC CONTEST REFERENCE</div>
+            </div>
+          </div>
+        </section>
+        """
+
+    if style == "terminal":
+        inst_block = f"""<div class="cover-term-row"><span class="cover-term-prompt" style="color: {accent};">user@icpc:~$</span> <span class="cover-term-cmd">cat /etc/institution</span></div>
+        <div class="cover-term-out cover-term-inst-out term-inst-out" style="color: {accent};">{inst}</div>""" if inst else ""
+        team_block = f"""<div class="cover-term-row"><span class="cover-term-prompt" style="color: {accent};">user@icpc:~$</span> <span class="cover-term-cmd">whoami --team</span></div>
+              <div class="cover-term-out cover-term-team-out term-team-out">{team}</div>""" if team else ""
+        return f"""
+        <section class="cover cover-terminal" id="cover-page-anchor">
+          <div class="cover-term-window">
+            <div class="cover-term-titlebar">
+              <div class="cover-term-traffic">
+                <span class="cover-term-btn cover-term-btn-red"></span>
+                <span class="cover-term-btn cover-term-btn-yellow"></span>
+                <span class="cover-term-btn cover-term-btn-green"></span>
+              </div>
+              <span class="cover-term-tab">nvim — contest_reference.cpp</span>
+              <span class="cover-term-session">[UTF-8 // C++20]</span>
+            </div>
+            <div class="cover-term-body">
+              <div class="cover-term-row"><span class="cover-term-prompt" style="color: {accent};">user@icpc:~$</span> <span class="cover-term-cmd">cat /etc/codebook/title</span></div>
+              <div class="cover-term-out cover-term-title-highlight">{title}</div>
+              {inst_block}
+              {team_block}
+              <div class="cover-term-row"><span class="cover-term-prompt" style="color: {accent};">user@icpc:~$</span> <span class="cover-term-cursor" style="color: {accent};">█</span></div>
+            </div>
+            <div class="cover-term-statusline">
+              <span class="cover-term-mode" style="background: {accent};">NORMAL</span>
+              <span class="cover-term-filepath">codebook.cpp</span>
+              <span class="cover-term-flags">[RO]</span>
+              <span class="cover-term-status-right">
+                <span>UTF-8</span>
+                <span>C++20</span>
+                <span>100%</span>
+                <span>LN: 1, COL: 1</span>
+              </span>
+            </div>
+          </div>
+        </section>
+        """
+
+    if style == "blueprint":
+        inst_val = inst if inst else "COMPETITIVE PROGRAMMING UNION"
+        team_val = team if team else "UNREGISTERED TEAM"
+        return f"""
+        <section class="cover cover-blueprint" id="cover-page-anchor">
+          <div class="cover-bp-inner">
+            <div class="cover-bp-grid-bg" aria-hidden="true"></div>
+            <div class="cover-bp-corner cover-bp-tl">+</div>
+            <div class="cover-bp-corner cover-bp-tr">+</div>
+            <div class="cover-bp-corner cover-bp-bl">+</div>
+            <div class="cover-bp-corner cover-bp-br">+</div>
+            
+            <div class="cover-bp-center">
+              <div class="cover-bp-schematic">
+                <svg class="cover-bp-desktop-svg" viewBox="0 0 240 130" width="240" height="130" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <!-- Dimension arrows above monitor -->
+                  <line x1="35" y1="8" x2="205" y2="8" stroke="{accent}" stroke-width="0.9" stroke-dasharray="3 2" opacity="0.6"/>
+                  <line x1="35" y1="4" x2="35" y2="12" stroke="{accent}" stroke-width="1"/>
+                  <line x1="205" y1="4" x2="205" y2="12" stroke="{accent}" stroke-width="1"/>
+                  <polygon points="35,8 40,6.5 40,9.5" fill="{accent}" opacity="0.8"/>
+                  <polygon points="205,8 200,6.5 200,9.5" fill="{accent}" opacity="0.8"/>
+                  <text x="120" y="7" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="4.5" fill="{accent}" font-weight="700" letter-spacing="1.2" opacity="0.85">DISP.UNIT // 27" PRECISION CAD REFERENCE</text>
+
+                  <!-- CAD Registration Corner Crosshairs -->
+                  <path d="M 23 18 L 29 18 M 26 15 L 26 21" stroke="{accent}" stroke-width="0.8" opacity="0.4"/>
+                  <path d="M 211 18 L 217 18 M 214 15 L 214 21" stroke="{accent}" stroke-width="0.8" opacity="0.4"/>
+
+                  <!-- Monitor Chassis -->
+                  <rect x="35" y="14" width="170" height="84" rx="3.5" stroke="{accent}" stroke-width="1.6" fill="{accent_bg}"/>
+                  <rect x="38" y="17" width="164" height="78" rx="2" stroke="{accent}" stroke-width="0.8" stroke-dasharray="4 2" opacity="0.35"/>
+                  
+                  <!-- Screen Active Area -->
+                  <rect x="41" y="20" width="158" height="72" rx="2" stroke="{accent}" stroke-width="1" fill="{accent_bg_subtle}"/>
+                  
+                  <!-- Screen Titlebar -->
+                  <line x1="41" y1="28" x2="199" y2="28" stroke="{accent}" stroke-width="0.9" opacity="0.4"/>
+                  <circle cx="48" cy="24" r="1.5" fill="{accent}" opacity="0.8"/>
+                  <circle cx="53" cy="24" r="1.5" fill="{accent}" opacity="0.8"/>
+                  <circle cx="58" cy="24" r="1.5" fill="{accent}" opacity="0.8"/>
+                  <rect x="68" y="21.5" width="46" height="6.5" rx="1" stroke="{accent}" stroke-width="0.6" fill="{accent_bg_sub}"/>
+                  <text x="91" y="26.2" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="3.8" fill="{accent}" opacity="0.9">codebook.cpp [RO]</text>
+
+                  <!-- Vertical Split in Editor -->
+                  <line x1="130" y1="28" x2="130" y2="92" stroke="{accent}" stroke-width="0.7" stroke-dasharray="2 2" opacity="0.35"/>
+
+                  <!-- Left Pane: Code & Gutter -->
+                  <line x1="50" y1="28" x2="50" y2="92" stroke="{accent}" stroke-width="0.5" opacity="0.25"/>
+                  <line x1="54" y1="36" x2="88" y2="36" stroke="{accent}" stroke-width="1.5" stroke-linecap="round"/>
+                  <line x1="62" y1="43" x2="118" y2="43" stroke="{accent}" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>
+                  <line x1="62" y1="50" x2="104" y2="50" stroke="{accent}" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>
+                  <line x1="72" y1="57" x2="122" y2="57" stroke="{accent}" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>
+                  <line x1="72" y1="64" x2="112" y2="64" stroke="{accent}" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>
+                  <line x1="62" y1="71" x2="94" y2="71" stroke="{accent}" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>
+                  <line x1="54" y1="78" x2="78" y2="78" stroke="{accent}" stroke-width="1.5" stroke-linecap="round"/>
+                  <rect x="82" y="75" width="5" height="5" fill="{accent}" opacity="0.85"/>
+                  <line x1="54" y1="85" x2="96" y2="85" stroke="{accent}" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="3 2" opacity="0.5"/>
+
+                  <!-- Right Pane: Algorithm Graph / DAG Blueprint -->
+                  <text x="165" y="36" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="4" fill="{accent}" font-weight="700" letter-spacing="0.8" opacity="0.8">DAG // TOPOLOGICAL</text>
+                  <!-- Tree Edges -->
+                  <line x1="162" y1="48" x2="150" y2="59" stroke="{accent}" stroke-width="1.1"/>
+                  <line x1="168" y1="48" x2="180" y2="59" stroke="{accent}" stroke-width="1.1"/>
+                  <line x1="145" y1="65.5" x2="140" y2="76" stroke="{accent}" stroke-width="0.9" stroke-dasharray="2 1.5"/>
+                  <line x1="149" y1="65.5" x2="153" y2="76" stroke="{accent}" stroke-width="0.9"/>
+                  <line x1="183" y1="66" x2="183" y2="76" stroke="{accent}" stroke-width="0.9"/>
+                  <!-- Tree Nodes -->
+                  <circle cx="165" cy="45" r="4" stroke="{accent}" stroke-width="1.2" fill="{accent_bg_sub}"/>
+                  <text x="165" y="46.5" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="3.5" fill="{accent}" font-weight="700">1</text>
+                  <circle cx="147" cy="62" r="3.8" stroke="{accent}" stroke-width="1.1" fill="{accent_bg}"/>
+                  <text x="147" y="63.4" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="3.3" fill="{accent}" font-weight="700">2</text>
+                  <circle cx="183" cy="62" r="3.8" stroke="{accent}" stroke-width="1.1" fill="{accent_bg}"/>
+                  <text x="183" y="63.4" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="3.3" fill="{accent}" font-weight="700">3</text>
+                  <circle cx="183" cy="62" r="6.5" stroke="{accent}" stroke-width="0.6" stroke-dasharray="1.5 1.5" opacity="0.5"/>
+                  <circle cx="138" cy="79" r="3.2" stroke="{accent}" stroke-width="1" fill="{accent_bg}"/>
+                  <circle cx="155" cy="79" r="3.2" stroke="{accent}" stroke-width="1" fill="{accent_bg}"/>
+                  <circle cx="183" cy="79" r="3.2" stroke="{accent}" stroke-width="1" fill="{accent_bg}"/>
+
+                  <!-- Monitor Stand -->
+                  <path d="M110 98 L130 98 L126 111 L114 111 Z" stroke="{accent}" stroke-width="1.3" fill="{accent_bg}"/>
+                  <rect x="96" y="111" width="48" height="4.5" rx="1.8" stroke="{accent}" stroke-width="1.3" fill="{accent_bg_sub}"/>
+                  <line x1="102" y1="113.2" x2="138" y2="113.2" stroke="{accent}" stroke-width="0.6" opacity="0.6"/>
+
+                  <!-- Desk Surface / Mat Guideline -->
+                  <line x1="20" y1="118" x2="220" y2="118" stroke="{accent}" stroke-width="0.7" stroke-dasharray="4 2.5" opacity="0.45"/>
+
+                  <!-- Keyboard -->
+                  <polygon points="68,120 172,120 166,128 74,128" stroke="{accent}" stroke-width="1.2" fill="{accent_bg}"/>
+                  <line x1="77" y1="122.5" x2="163" y2="122.5" stroke="{accent}" stroke-width="0.8" stroke-dasharray="2 1.5"/>
+                  <line x1="76" y1="125" x2="164" y2="125" stroke="{accent}" stroke-width="0.8" stroke-dasharray="2 1.5"/>
+                  <line x1="105" y1="126.8" x2="135" y2="126.8" stroke="{accent}" stroke-width="1.3"/>
+
+                  <!-- Ergonomic Mouse -->
+                  <rect x="182" y="121" width="11" height="7.5" rx="3.5" stroke="{accent}" stroke-width="1.1" fill="{accent_bg}"/>
+                  <line x1="187.5" y1="121" x2="187.5" y2="124" stroke="{accent}" stroke-width="0.8"/>
+                </svg>
+              </div>
+              <h1 class="cover-bp-title">{title}</h1>
+              <div class="cover-bp-rule-accent"></div>
+            </div>
+
+            <div class="cover-bp-block">
+              <table class="cover-bp-table">
+                <tr>
+                  <td class="cover-bp-cell cover-bp-cell-main">
+                    <div class="cover-bp-label">INSTITUTION / UNIVERSITY</div>
+                    <div class="cover-bp-val-lg">{inst_val}</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="cover-bp-cell">
+                    <div class="cover-bp-label">CONTEST TEAM IDENTITY</div>
+                    <div class="cover-bp-val">{team_val}</div>
+                  </td>
+                </tr>
+              </table>
             </div>
           </div>
         </section>
@@ -461,36 +640,6 @@ def _cover_html(style: str, book_title: str, team_name: str, institution_name: s
         </section>
         """
 
-    if style == "terminal":
-        inst_block = f"""<div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cmd">cat /etc/institution</span></div>
-        <div class="cover-term-out cover-term-inst-out term-inst-out">{inst}</div>""" if inst else ""
-        team_block = f"""<div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cmd">whoami</span></div>
-              <div class="cover-term-out cover-term-team-out term-team-out">{team}</div>""" if team else ""
-        return f"""
-        <section class="cover cover-terminal" id="cover-page-anchor">
-          <div class="cover-term-window">
-            <div class="cover-term-titlebar">
-              <div class="cover-term-traffic">
-                <span class="cover-term-btn cover-term-btn-red"></span>
-                <span class="cover-term-btn cover-term-btn-yellow"></span>
-                <span class="cover-term-btn cover-term-btn-green"></span>
-              </div>
-              <span class="cover-term-tab">bash — 80×24 — contest-codebook</span>
-              <span class="cover-term-session">[UTF-8]</span>
-            </div>
-            <div class="cover-term-body">
-              <div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cmd">cat /etc/codebook/title</span></div>
-              <div class="cover-term-out cover-term-title-highlight">{title}</div>
-              {inst_block}
-              {team_block}
-              <div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cmd">./verify_build.sh --strict</span></div>
-              <div class="cover-term-out cover-term-success"><span>✔</span> 100% algorithms verified • 0 warnings • Ready for contest</div>
-              <div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cursor">█</span></div>
-            </div>
-          </div>
-        </section>
-        """
-
     if style == "geometric":
         return f"""
         <section class="cover cover-geometric" id="cover-page-anchor">
@@ -504,37 +653,7 @@ def _cover_html(style: str, book_title: str, team_name: str, institution_name: s
         </section>
         """
 
-    # "minimal" (default / fallback)
-    inst_block = f'<div class="cover-min-inst">{inst}</div>' if inst else ""
-    team_block = f'<div class="cover-min-team">{team}</div>' if team else ""
-    return f"""
-    <section class="cover cover-minimal" id="cover-page-anchor">
-      <div class="cover-min-inner">
-        <div class="cover-min-header">
-          <div class="cover-min-badge">
-            <span class="cover-min-badge-dot"></span>
-            <span>OFFICIAL REFERENCE MANUAL</span>
-          </div>
-          <span class="cover-min-serial">ICPC-STD // 2026</span>
-        </div>
-        <div class="cover-min-body">
-          <h1 class="cover-min-title">{title}</h1>
-          <div class="cover-min-rule-wrap">
-            <div class="cover-min-rule"></div>
-            <span class="cover-min-coord">BUILD SEC. 01</span>
-          </div>
-          <div class="cover-min-meta">
-            {inst_block}
-            {team_block}
-          </div>
-        </div>
-        <div class="cover-min-footer">
-          <span>COMPETITIVE PROGRAMMING REFERENCE</span>
-          <span>VERIFIED COMPILATION</span>
-        </div>
-      </div>
-    </section>
-    """
+    return _cover_html("sketch", book_title, team_name, institution_name, accent_color)
 
 
 def build_css(code_font, page_size, accent_color, institution_name, team_name, show_header, template_accent_color="#0071E3"):
@@ -557,30 +676,33 @@ def build_css(code_font, page_size, accent_color, institution_name, team_name, s
   size: {page_size_css};
   margin: 16mm 12mm 14mm 12mm;
   {top_left_rule}
-  @top-center {{ content: string(topicname); font-family: 'Inter', sans-serif; font-size: 9px; color: #888780; text-transform: uppercase; letter-spacing: 0.3px; }}
+  @top-center {{ content: string(topicname); font-family: 'Inter', sans-serif; font-size: 8.5pt; font-weight: 600; color: {accent_color}; text-transform: uppercase; letter-spacing: 0.5px; }}
   @top-right {{
-    content: counter(page); font-family: 'Inter', sans-serif; font-size: 9px; color: #5F5E5A;
-    width: 6mm; height: 6mm;
-    border: 0.8pt solid #888780; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    transform: rotate(2deg);
+    content: counter(page); font-family: 'JetBrains Mono', monospace; font-size: 8pt; font-weight: 700; color: {accent_color};
+    padding: 0.8mm 3mm;
+    border: 0.8pt solid {accent_color}; border-radius: 999px;
+    background: {_hex_to_rgba(accent_color, 0.05)};
   }}
 }}
 * {{ box-sizing: border-box; }}
 body {{ font-family: 'Inter', sans-serif; color: #2C2C2A; margin: 0; }}
 
 .cover {{ page-break-after: always; position: relative; }}
-.cover-sketch-page {{ page-break-after: always; position: relative; height: 257mm; }}
 .cover-team {{ font-size: 13px; color: #5F5E5A; margin: 0; }}
 .cover-inst {{ font-size: 11.5px; font-weight: 700; color: #55534D; text-transform: uppercase; letter-spacing: 1.1px; margin: 0 0 8px; }}
 
-/* ---- sketch cover ---- */
-.cover-sketch {{
-  position: absolute; inset: 0;
+/* ---- 1. SKETCH / EDITORIAL (Princeton & MIT Academic Compendium) ---- */
+.cover-sketch-page {{ page-break-after: always; position: relative; height: 260mm; box-sizing: border-box; }}
+.cover-sketch-inner {{
+  position: relative; width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center;
-  color: {accent_color}; overflow: hidden;
+  border: 1pt solid rgba(0, 0, 0, 0.14); border-radius: 4px;
+  box-sizing: border-box; padding: 10mm;
 }}
-.cover-sketch-border {{ position: absolute; inset: -16mm; width: calc(100% + 32mm); height: calc(100% + 32mm); pointer-events: none; }}
+.cover-sketch-border {{
+  position: absolute; inset: 2mm;
+  border: 0.5pt solid rgba(0, 0, 0, 0.07); pointer-events: none;
+}}
 .cover-sketch-doodles {{ position: absolute; inset: 0; pointer-events: none; font-family: 'JetBrains Mono', monospace; overflow: hidden; }}
 .csd {{ position: absolute; font-size: 11px; color: {accent_color}; opacity: 0.07; white-space: nowrap; }}
 .csd-1  {{ top: 8%;  left: 5%;  font-size: 42px; transform: rotate(-8deg); opacity: 0.06; }}
@@ -595,74 +717,86 @@ body {{ font-family: 'Inter', sans-serif; color: #2C2C2A; margin: 0; }}
 .csd-10 {{ top: 78%; left: 35%; font-size: 15px; transform: rotate(-3deg); opacity: 0.06; }}
 .csd-11 {{ top: 22%; right: 3%; font-size: 11px; transform: rotate(4deg);  opacity: 0.09; }}
 .csd-12 {{ top: 92%; left: 52%; font-size: 11px; transform: rotate(-2deg); opacity: 0.07; }}
-.cover-sketch-body {{ position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 140mm; }}
-.cover-sketch-eyebrow {{ display: flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.8px; text-transform: uppercase; color: {accent_color}; opacity: 0.6; margin-bottom: 10mm; }}
-.cover-sketch-title {{ font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif; font-size: 36px; font-weight: 600; line-height: 1.15; color: #030302; margin: 0 0 7mm; letter-spacing: -0.03em; }}
-.cover-sketch-rule {{ width: 48mm; height: 4px; background: {accent_color}; margin: 0 auto 8mm; }}
-.cover-sketch-meta {{ display: flex; flex-direction: column; gap: 3px; margin-bottom: 8mm; }}
-.cover-sketch-inst {{ font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: {accent_color}; margin: 0; opacity: 0.85; }}
-.cover-sketch-team {{ font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #888780; margin: 0; }}
-.cover-sketch-bracket {{ color: {accent_color}; opacity: 0.4; margin-top: 2mm; }}
+.csd-13 {{ top: 48%; right: 4%; font-size: 11px; transform: rotate(2deg); opacity: 0.08; }}
+.csd-14 {{ top: 32%; left: 8%; font-size: 14px; transform: rotate(-4deg); opacity: 0.08; }}
+.cover-sketch-body {{ position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; max-width: 150mm; }}
+.cover-sketch-title {{ font-family: 'Gebuk', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 36pt; font-weight: 700; font-style: normal; line-height: 1.15; color: #0E0E0E; margin: 0 0 5mm; letter-spacing: 0.02em; -webkit-text-stroke: 0.4px #0E0E0E; }}
+.cover-sketch-rule-row {{ display: flex; align-items: center; justify-content: center; gap: 3mm; margin: 0 auto 5mm; width: 100%; }}
+.csk-line {{ height: 1px; width: 26mm; background: rgba(0, 0, 0, 0.2); display: inline-block; }}
+.csk-diamond {{ font-size: 7.5pt; color: {accent_color}; }}
+.cover-sketch-meta {{ display: flex; flex-direction: column; align-items: center; gap: 2.5mm; }}
+.cover-sketch-inst {{ font-size: 9.5pt; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: {accent_color}; margin: 0; opacity: 0.9; }}
+.cover-sketch-team-pill {{ font-family: 'JetBrains Mono', monospace; font-size: 12pt; font-weight: 700; color: #111110; background: rgba(0, 0, 0, 0.03); border: 0.8pt solid rgba(0, 0, 0, 0.12); padding: 2.5mm 10mm; border-radius: 4px; }}
 
-/* ---- minimal (default) -- plain, centered, thin accent rule ---- */
-.cover-minimal {{ padding-top: 40mm; text-align: left; }}
-.cover-minimal h1 {{ font-size: 26px; font-weight: 500; margin: 0 0 4px; color: {accent_color}; }}
-.cover-minimal .cover-team {{ margin-bottom: 24px; }}
-.cover-minimal-rule {{ width: 32mm; height: 2px; background: {accent_color}; }}
+/* ---- 2. TERMINAL PRO (macOS Minimal Warm Editor Window) ---- */
+.cover-terminal {{ padding: 22mm 12mm 0; box-sizing: border-box; }}
+.cover-term-window {{ background: #FAFAF9; border: 1.2pt solid #E2E1DC; border-radius: 3.5mm; overflow: hidden; }}
+.cover-term-titlebar {{ background: #F0EFEB; padding: 2.2mm 3.5mm; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.2pt solid #E2E1DC; }}
+.cover-term-traffic {{ display: flex; gap: 1.8mm; align-items: center; }}
+.cover-term-btn {{ width: 2.6mm; height: 2.6mm; border-radius: 50%; display: inline-block; }}
+.cover-term-btn-red {{ background: #FF5F56; }}
+.cover-term-btn-yellow {{ background: #FFBD2E; }}
+.cover-term-btn-green {{ background: #27C93F; }}
+.cover-term-tab {{ font-size: 7.5pt; font-weight: 600; color: #44403C; font-family: 'JetBrains Mono', monospace; }}
+.cover-term-session {{ font-size: 7pt; color: #78716C; font-family: 'JetBrains Mono', monospace; }}
+.cover-term-body {{ padding: 7mm 7mm 9mm; font-family: 'JetBrains Mono', monospace; background: #FAFAF9; color: #1C1917; }}
+.cover-term-row {{ margin: 0 0 1.8mm; font-size: 8.5pt; display: flex; align-items: baseline; gap: 2mm; }}
+.cover-term-prompt {{ color: {accent_color}; font-weight: 700; }}
+.cover-term-cmd {{ color: #1C1917; font-weight: 600; }}
+.cover-term-out {{ padding-left: 3.5mm; margin: 0 0 3.5mm; font-size: 8.5pt; }}
+.cover-term-title-highlight {{ font-size: 16pt; font-weight: 800; color: #0C0A09; letter-spacing: -0.3px; margin: 1mm 0 2.5mm; }}
+.cover-term-inst-out {{ color: {accent_color}; font-weight: 700; font-size: 9.5pt; }}
+.cover-term-team-out {{ color: #15803D; font-weight: 800; font-size: 11pt; }}
+.cover-term-cursor {{ color: {accent_color}; font-weight: 700; }}
+.cover-term-statusline {{ background: #F0EFEB; color: #44403C; padding: 1.6mm 3.5mm; font-size: 6.8pt; font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; justify-content: space-between; font-weight: 600; border-top: 1pt solid #E2E1DC; }}
+.cover-term-mode {{ background: {accent_color}; color: #FAFAF9; padding: 0.4mm 1.8mm; border-radius: 2px; font-weight: 800; margin-right: 2mm; }}
+.cover-term-filepath {{ color: #1C1917; margin-right: 1.5mm; }}
+.cover-term-flags {{ color: #D97706; }}
+.cover-term-status-right {{ display: flex; gap: 2.5mm; color: #78716C; }}
 
-/* ---- banner -- was a full solid color band (expensive to print); now a
-   short, thick accent rule as the graphic anchor instead ---- */
+/* ---- 3. TECHNICAL BLUEPRINT (CERN / Engineering Precision Grid) ---- */
+.cover-blueprint {{ height: 260mm; padding: 10mm; box-sizing: border-box; background: #FFFFFF; position: relative; }}
+.cover-bp-inner {{
+  height: 100%; border: 1.2pt solid {accent_color}; position: relative;
+  display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center;
+  padding: 8mm 7mm 12mm; box-sizing: border-box;
+  background: radial-gradient(circle, {_hex_to_rgba(accent_color, 0.08)} 0.8px, transparent 0.8px);
+  background-size: 5mm 5mm;
+}}
+.cover-bp-corner {{ position: absolute; font-family: 'JetBrains Mono', monospace; font-size: 11pt; font-weight: 700; color: {accent_color}; line-height: 1; }}
+.cover-bp-tl {{ top: -2.5mm; left: -2.5mm; }}
+.cover-bp-tr {{ top: -2.5mm; right: -2.5mm; }}
+.cover-bp-bl {{ bottom: -2.5mm; left: -2.5mm; }}
+.cover-bp-br {{ bottom: -2.5mm; right: -2.5mm; }}
+.cover-bp-center {{ text-align: center; margin: auto 0; width: 100%; }}
+.cover-bp-schematic {{ margin-bottom: 7mm; }}
+.cover-bp-desktop-svg {{ display: block; margin: 0 auto; width: 78mm; height: auto; }}
+.cover-bp-title {{ font-family: 'Inter', sans-serif; font-size: 28pt; font-weight: 900; letter-spacing: -0.02em; color: #0F172A; text-transform: uppercase; margin: 0 0 4mm; }}
+.cover-bp-rule-accent {{ width: 28mm; height: 1.6pt; background: {accent_color}; margin: 0 auto; opacity: 0.8; }}
+.cover-bp-block {{ width: 100%; max-width: 156mm; margin: 0 auto 6mm; }}
+.cover-bp-table {{ width: 100%; border-collapse: collapse; border: 1pt solid {accent_color}; font-family: 'JetBrains Mono', monospace; background: #FFFFFF; }}
+.cover-bp-cell {{ border: 0.8pt solid {accent_color}; padding: 2.8mm 4mm; text-align: left; vertical-align: top; width: 100%; }}
+.cover-bp-cell-main {{ background: {_hex_to_rgba(accent_color, 0.04)}; }}
+.cover-bp-label {{ font-size: 6pt; font-weight: 700; color: {accent_color}; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 1mm; }}
+.cover-bp-val-lg {{ font-size: 10.5pt; font-weight: 800; color: #0F172A; letter-spacing: 0.3px; line-height: 1.25; }}
+.cover-bp-val {{ font-size: 10pt; font-weight: 800; color: #0F172A; letter-spacing: 0.3px; }}
+
+/* Legacy / fallback cover styles */
 .cover-banner-content {{ padding-top: 54mm; }}
 .cover-banner-rule {{ width: 26mm; height: 3.2mm; background: {accent_color}; margin-bottom: 8mm; }}
 .cover-banner-content h1 {{ font-size: 28px; font-weight: 700; margin: 0 0 5mm; color: #1C1C1C; letter-spacing: -0.3px; }}
 .cover-banner-content .cover-team {{ font-size: 13px; font-weight: 500; color: {accent_color}; }}
 
-/* ---- frame -- academic double-border, centered, small caps ---- */
 .cover-frame {{ padding: 14mm; height: calc(100% - 28mm); }}
-.cover-frame-border {{
-  border: 1.5pt solid {accent_color}; height: 100%; padding: 8mm;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  text-align: center; position: relative;
-}}
-.cover-frame-border::before {{
-  content: ""; position: absolute; top: 4mm; left: 4mm; right: 4mm; bottom: 4mm;
-  border: 0.5pt solid {accent_color};
-}}
+.cover-frame-border {{ border: 1.5pt solid {accent_color}; height: 100%; padding: 8mm; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; }}
+.cover-frame-border::before {{ content: ""; position: absolute; top: 4mm; left: 4mm; right: 4mm; bottom: 4mm; border: 0.5pt solid {accent_color}; }}
 .cover-frame h1 {{ font-size: 24px; font-weight: 500; color: {accent_color}; margin: 6mm 0; letter-spacing: 0.5px; }}
 .cover-frame .cover-inst {{ margin: 0; }}
 .cover-frame .cover-team {{ margin-top: 2mm; }}
 .cover-frame-rule {{ width: 18mm; height: 1px; background: {accent_color}; opacity: 0.5; }}
 
-/* ---- terminal -- macOS crisp light theme window ---- */
-.cover-terminal {{ padding: 35mm 15mm 0; }}
-.cover-term-window {{ background: #FFFFFF; border: 1.2pt solid #E4E4E7; border-radius: 3.5mm; overflow: hidden; }}
-.cover-term-titlebar {{ background: #F4F4F5; padding: 2.8mm 4mm; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.2pt solid #E4E4E7; }}
-.cover-term-traffic {{ display: flex; gap: 2mm; align-items: center; }}
-.cover-term-btn {{ width: 2.8mm; height: 2.8mm; border-radius: 50%; display: inline-block; }}
-.cover-term-btn-red {{ background: #FF5F56; }}
-.cover-term-btn-yellow {{ background: #FFBD2E; }}
-.cover-term-btn-green {{ background: #27C93F; }}
-.cover-term-tab {{ font-size: 8.5pt; font-weight: 600; color: #52525B; font-family: 'JetBrains Mono', monospace; }}
-.cover-term-session {{ font-size: 7.5pt; color: #71717A; font-family: 'JetBrains Mono', monospace; }}
-.cover-term-body {{ padding: 8mm 7mm 10mm; font-family: 'JetBrains Mono', monospace; background: #FFFFFF; color: #18181B; }}
-.cover-term-row {{ margin: 0 0 1.5mm; font-size: 9pt; }}
-.cover-term-prompt {{ color: {accent_color}; font-weight: 700; margin-right: 2mm; }}
-.cover-term-cmd {{ color: #0F172A; font-weight: 600; }}
-.cover-term-out {{ padding-left: 4mm; margin: 0 0 3.5mm; font-size: 9pt; }}
-.cover-term-title-highlight {{ font-size: 15pt; font-weight: 800; color: #09090B; letter-spacing: -0.3px; margin: 1mm 0 3.5mm; }}
-.cover-term-inst-out {{ color: {accent_color}; font-weight: 600; font-size: 10pt; }}
-.cover-term-team-out {{ color: #16A34A; font-weight: 700; font-size: 10.5pt; }}
-.cover-term-success {{ color: #52525B; font-size: 8.5pt; font-weight: 500; }}
-.cover-term-success span {{ color: #16A34A; font-weight: 800; }}
-.cover-term-cursor {{ color: {accent_color}; font-weight: 700; }}
-
-/* ---- geometric -- was a large 90mm solid triangle; now a small corner
-   mark (~90% less ink) plus a short rule for the same graphic energy ---- */
 .cover-geometric {{ padding-top: 50mm; padding-left: 4mm; position: relative; }}
-.cover-geo-mark {{
-  position: absolute; top: 0; right: 0; width: 0; height: 0;
-  border-style: solid; border-width: 28mm 28mm 0 0; border-color: {accent_color} transparent transparent transparent;
-}}
+.cover-geo-mark {{ position: absolute; top: 0; right: 0; width: 0; height: 0; border-style: solid; border-width: 28mm 28mm 0 0; border-color: {accent_color} transparent transparent transparent; }}
 .cover-geo-text h1 {{ font-size: 27px; font-weight: 700; margin: 0 0 4mm; color: #1C1C1C; max-width: 120mm; }}
 .cover-geo-rule {{ width: 20mm; height: 1.6mm; background: {accent_color}; margin-bottom: 6mm; }}
 .cover-geo-text .cover-team {{ font-weight: 500; color: {accent_color}; }}

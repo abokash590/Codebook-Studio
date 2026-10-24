@@ -605,6 +605,10 @@ function applyThemeSettings() {
   const pageSize = PAGE_DIMENSIONS[state.settings.page_size] ? state.settings.page_size : "A4";
   root.setProperty("--code-font", `'${codeFont}', monospace`);
   root.setProperty("--accent", accent);
+  const rgbMatch = accent.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+  if (rgbMatch) {
+    root.setProperty("--accent-rgb", `${parseInt(rgbMatch[1], 16)}, ${parseInt(rgbMatch[2], 16)}, ${parseInt(rgbMatch[3], 16)}`);
+  }
   root.setProperty("--template-accent", templateAccent);
   root.setProperty("--page-w", PAGE_DIMENSIONS[pageSize].w);
   root.setProperty("--page-h", PAGE_DIMENSIONS[pageSize].h);
@@ -713,7 +717,9 @@ function renderSidebar() {
     tmplNameEl.textContent = tName;
     tmplNameEl.title = `${tName} (Double-click to rename)`;
   }
-  $("cover-style").value = state.settings.cover_style || "minimal";
+  let initialCover = state.settings.cover_style || "sketch";
+  if (initialCover === "minimal") initialCover = "sketch";
+  $("cover-style").value = initialCover;
   syncActiveCoverThumb($("cover-style").value);
   if ($("card-style")) {
     $("card-style").value = state.settings.card_style || "craft";
@@ -1744,11 +1750,13 @@ function cardHtml(s, topic, cardWidthPx, isFirstInTopic) {
 function headerLeftHtml() {
   const on = state.settings.show_team_footer;
   const enabled = !(on === false || on === 0 || on === "0");
-  const bits = [state.settings.institution_name, state.settings.team_name]
-    .map((v) => (v || "").trim())
-    .filter(Boolean);
-  if (!enabled || bits.length === 0) return "";
-  return `<span class="page-header-left">${escapeHtml(bits.join(" \u2014 "))}</span>`;
+  const inst = (state.settings.institution_name || "").trim();
+  const team = (state.settings.team_name || "").trim();
+  if (!enabled || (!inst && !team)) return "";
+  if (inst && team) {
+    return `<span class="page-header-left"><span class="hdr-inst">${escapeHtml(inst)}</span><span class="hdr-sep">◆</span><span class="hdr-team">${escapeHtml(team)}</span></span>`;
+  }
+  return `<span class="page-header-left"><span class="hdr-inst">${escapeHtml(inst || team)}</span></span>`;
 }
 
 function syncSnippetsAfterTemplateCheckboxes(checked) {
@@ -1871,6 +1879,16 @@ function buildTextPageChunks(text, metrics) {
   return pages.map((lns) => lns.join("\n"));
 }
 
+function hexToRgbaJs(hex, alpha) {
+  let c = (hex || "#0284c7").replace("#", "").trim();
+  if (c.length === 3) c = c.split("").map((ch) => ch + ch).join("");
+  if (c.length !== 6) return `rgba(2, 132, 199, ${alpha})`;
+  const r = parseInt(c.slice(0, 2), 16) || 0;
+  const g = parseInt(c.slice(2, 4), 16) || 0;
+  const b = parseInt(c.slice(4, 6), 16) || 0;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 // JS twin of _cover_html() in pdf_builder.py -- keep both in sync if you
 // touch the markup. Each style is genuinely different markup, not just a
 // CSS reskin, so the preview matches what the PDF actually produces.
@@ -1878,9 +1896,15 @@ function coverPageHtml(style, bookTitle, teamName, institutionName) {
   const title = escapeHtml(bookTitle);
   const team = escapeHtml(teamName);
   const inst = escapeHtml(institutionName);
-  const instHtml = inst ? `<p class="cover-inst">${inst}</p>` : "";
+  const accent = state.settings.accent_color || "#0284C7";
 
   if (style === "terminal") {
+    const instBlock = inst ? `
+      <div class="cover-term-row"><span class="cover-term-prompt" style="color: ${accent};">user@icpc:~$</span> <span class="cover-term-cmd">cat /etc/institution</span></div>
+      <div class="cover-term-out cover-term-inst-out term-inst-out" style="color: ${accent};">${inst}</div>` : "";
+    const teamBlock = team ? `
+      <div class="cover-term-row"><span class="cover-term-prompt" style="color: ${accent};">user@icpc:~$</span> <span class="cover-term-cmd">whoami --team</span></div>
+      <div class="cover-term-out cover-term-team-out term-team-out">${team}</div>` : "";
     return `
       <div class="cover-term-window">
         <div class="cover-term-titlebar">
@@ -1889,23 +1913,32 @@ function coverPageHtml(style, bookTitle, teamName, institutionName) {
             <span class="cover-term-btn cover-term-btn-yellow"></span>
             <span class="cover-term-btn cover-term-btn-green"></span>
           </div>
-          <span class="cover-term-tab">bash — 80×24 — contest-codebook</span>
-          <span class="cover-term-session">[UTF-8]</span>
+          <span class="cover-term-tab">nvim — contest_reference.cpp</span>
+          <span class="cover-term-session">[UTF-8 // C++20]</span>
         </div>
         <div class="cover-term-body">
-          <div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cmd">cat /etc/codebook/title</span></div>
+          <div class="cover-term-row"><span class="cover-term-prompt" style="color: ${accent};">user@icpc:~$</span> <span class="cover-term-cmd">cat /etc/codebook/title</span></div>
           <div class="cover-term-out cover-term-title-highlight">${title}</div>
-          ${inst ? `<div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cmd">cat /etc/institution</span></div>
-          <div class="cover-term-out cover-term-inst-out term-inst-out">${inst}</div>` : ""}
-          ${team ? `<div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cmd">whoami</span></div>
-          <div class="cover-term-out cover-term-team-out term-team-out">${team}</div>` : ""}
-          <div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cmd">./verify_build.sh --strict</span></div>
-          <div class="cover-term-out cover-term-success"><span>✔</span> 100% algorithms verified • 0 warnings • Ready for contest</div>
-          <div class="cover-term-row"><span class="cover-term-prompt">user@icpc:~$</span> <span class="cover-term-cursor">█</span></div>
+          ${instBlock}
+          ${teamBlock}
+          <div class="cover-term-row"><span class="cover-term-prompt" style="color: ${accent};">user@icpc:~$</span> <span class="cover-term-cursor" style="color: ${accent};">█</span></div>
+        </div>
+        <div class="cover-term-statusline">
+          <span class="cover-term-mode" style="background: ${accent};">NORMAL</span>
+          <span class="cover-term-filepath">codebook.cpp</span>
+          <span class="cover-term-flags">[RO]</span>
+          <span class="cover-term-status-right">
+            <span>UTF-8</span>
+            <span>C++20</span>
+            <span>100%</span>
+            <span>LN: 1, COL: 1</span>
+          </span>
         </div>
       </div>`;
   }
   if (style === "sketch") {
+    const instBlock = inst ? `<p class="cover-sketch-inst">${inst}</p>` : "";
+    const teamBlock = team ? `<div class="cover-sketch-team-pill">${team}</div>` : "";
     return `
       <div class="cover-sketch-inner">
         <div class="cover-sketch-border"></div>
@@ -1918,17 +1951,14 @@ function coverPageHtml(style, bookTitle, teamName, institutionName) {
           <span class="csd csd-6">int main()</span>
           <span class="csd csd-7">&lt;&lt;</span>
           <span class="csd csd-8">return 0;</span>
-          <span class="csd csd-9">[ ]</span>
-          <span class="csd csd-10">==</span>
-          <span class="csd csd-11">O(n log n)</span>
+          <span class="csd csd-9">∑</span>
+          <span class="csd csd-10">O(n log n)</span>
+          <span class="csd csd-11">∫</span>
           <span class="csd csd-12">nullptr</span>
+          <span class="csd csd-13">matrix[N][N]</span>
+          <span class="csd csd-14">λ</span>
         </div>
         <div class="cover-sketch-body">
-          <div class="cover-sketch-eyebrow">
-            <span>VOL. I</span>
-            <span class="cover-sketch-eyebrow-sep">•</span>
-            <span>ALGORITHMIC COMPENDIUM</span>
-          </div>
           <h1 class="cover-sketch-title">${title}</h1>
           <div class="cover-sketch-rule-row">
             <span class="csk-line"></span>
@@ -1936,39 +1966,134 @@ function coverPageHtml(style, bookTitle, teamName, institutionName) {
             <span class="csk-line"></span>
           </div>
           <div class="cover-sketch-meta">
-            ${inst ? `<p class="cover-sketch-inst">${inst}</p>` : ""}
-            ${team ? `<div class="cover-sketch-team-pill">${team}</div>` : ""}
+            ${instBlock}
+            ${teamBlock}
           </div>
-          <div class="cover-sketch-footer">COMPILED FOR ICPC CONTEST REFERENCE</div>
         </div>
       </div>`;
   }
-  // Minimal (Swiss / Apple Modern Architecture)
-  return `
-    <div class="cover-min-inner">
-      <div class="cover-min-header">
-        <div class="cover-min-badge">
-          <span class="cover-min-badge-dot"></span>
-          <span>OFFICIAL REFERENCE MANUAL</span>
+  if (style === "blueprint") {
+    const instVal = inst || "COMPETITIVE PROGRAMMING UNION";
+    const teamVal = team || "UNREGISTERED TEAM";
+    const accentBg = hexToRgbaJs(accent, 0.05);
+    const accentBgSub = hexToRgbaJs(accent, 0.08);
+    const accentBgSubtle = hexToRgbaJs(accent, 0.02);
+    return `
+      <div class="cover-bp-inner">
+        <div class="cover-bp-corner cover-bp-tl">+</div>
+        <div class="cover-bp-corner cover-bp-tr">+</div>
+        <div class="cover-bp-corner cover-bp-bl">+</div>
+        <div class="cover-bp-corner cover-bp-br">+</div>
+        
+        <div class="cover-bp-center">
+          <div class="cover-bp-schematic">
+            <svg class="cover-bp-desktop-svg" viewBox="0 0 240 130" width="240" height="130" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Dimension arrows above monitor -->
+              <line x1="35" y1="8" x2="205" y2="8" stroke="${accent}" stroke-width="0.9" stroke-dasharray="3 2" opacity="0.6"/>
+              <line x1="35" y1="4" x2="35" y2="12" stroke="${accent}" stroke-width="1"/>
+              <line x1="205" y1="4" x2="205" y2="12" stroke="${accent}" stroke-width="1"/>
+              <polygon points="35,8 40,6.5 40,9.5" fill="${accent}" opacity="0.8"/>
+              <polygon points="205,8 200,6.5 200,9.5" fill="${accent}" opacity="0.8"/>
+              <text x="120" y="7" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="4.5" fill="${accent}" font-weight="700" letter-spacing="1.2" opacity="0.85">DISP.UNIT // 27" PRECISION CAD REFERENCE</text>
+
+              <!-- CAD Registration Corner Crosshairs -->
+              <path d="M 23 18 L 29 18 M 26 15 L 26 21" stroke="${accent}" stroke-width="0.8" opacity="0.4"/>
+              <path d="M 211 18 L 217 18 M 214 15 L 214 21" stroke="${accent}" stroke-width="0.8" opacity="0.4"/>
+
+              <!-- Monitor Chassis -->
+              <rect x="35" y="14" width="170" height="84" rx="3.5" stroke="${accent}" stroke-width="1.6" fill="${accentBg}"/>
+              <rect x="38" y="17" width="164" height="78" rx="2" stroke="${accent}" stroke-width="0.8" stroke-dasharray="4 2" opacity="0.35"/>
+              
+              <!-- Screen Active Area -->
+              <rect x="41" y="20" width="158" height="72" rx="2" stroke="${accent}" stroke-width="1" fill="${accentBgSubtle}"/>
+              
+              <!-- Screen Titlebar -->
+              <line x1="41" y1="28" x2="199" y2="28" stroke="${accent}" stroke-width="0.9" opacity="0.4"/>
+              <circle cx="48" cy="24" r="1.5" fill="${accent}" opacity="0.8"/>
+              <circle cx="53" cy="24" r="1.5" fill="${accent}" opacity="0.8"/>
+              <circle cx="58" cy="24" r="1.5" fill="${accent}" opacity="0.8"/>
+              <rect x="68" y="21.5" width="46" height="6.5" rx="1" stroke="${accent}" stroke-width="0.6" fill="${accentBgSub}"/>
+              <text x="91" y="26.2" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="3.8" fill="${accent}" opacity="0.9">codebook.cpp [RO]</text>
+
+              <!-- Vertical Split in Editor -->
+              <line x1="130" y1="28" x2="130" y2="92" stroke="${accent}" stroke-width="0.7" stroke-dasharray="2 2" opacity="0.35"/>
+
+              <!-- Left Pane: Code & Gutter -->
+              <line x1="50" y1="28" x2="50" y2="92" stroke="${accent}" stroke-width="0.5" opacity="0.25"/>
+              <line x1="54" y1="36" x2="88" y2="36" stroke="${accent}" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="62" y1="43" x2="118" y2="43" stroke="${accent}" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>
+              <line x1="62" y1="50" x2="104" y2="50" stroke="${accent}" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>
+              <line x1="72" y1="57" x2="122" y2="57" stroke="${accent}" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>
+              <line x1="72" y1="64" x2="112" y2="64" stroke="${accent}" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>
+              <line x1="62" y1="71" x2="94" y2="71" stroke="${accent}" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>
+              <line x1="54" y1="78" x2="78" y2="78" stroke="${accent}" stroke-width="1.5" stroke-linecap="round"/>
+              <rect x="82" y="75" width="5" height="5" fill="${accent}" opacity="0.85"/>
+              <line x1="54" y1="85" x2="96" y2="85" stroke="${accent}" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="3 2" opacity="0.5"/>
+
+              <!-- Right Pane: Algorithm Graph / DAG Blueprint -->
+              <text x="165" y="36" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="4" fill="${accent}" font-weight="700" letter-spacing="0.8" opacity="0.8">DAG // TOPOLOGICAL</text>
+              <!-- Tree Edges -->
+              <line x1="162" y1="48" x2="150" y2="59" stroke="${accent}" stroke-width="1.1"/>
+              <line x1="168" y1="48" x2="180" y2="59" stroke="${accent}" stroke-width="1.1"/>
+              <line x1="145" y1="65.5" x2="140" y2="76" stroke="${accent}" stroke-width="0.9" stroke-dasharray="2 1.5"/>
+              <line x1="149" y1="65.5" x2="153" y2="76" stroke="${accent}" stroke-width="0.9"/>
+              <line x1="183" y1="66" x2="183" y2="76" stroke="${accent}" stroke-width="0.9"/>
+              <!-- Tree Nodes -->
+              <circle cx="165" cy="45" r="4" stroke="${accent}" stroke-width="1.2" fill="${accentBgSub}"/>
+              <text x="165" y="46.5" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="3.5" fill="${accent}" font-weight="700">1</text>
+              <circle cx="147" cy="62" r="3.8" stroke="${accent}" stroke-width="1.1" fill="${accentBg}"/>
+              <text x="147" y="63.4" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="3.3" fill="${accent}" font-weight="700">2</text>
+              <circle cx="183" cy="62" r="3.8" stroke="${accent}" stroke-width="1.1" fill="${accentBg}"/>
+              <text x="183" y="63.4" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="3.3" fill="${accent}" font-weight="700">3</text>
+              <circle cx="183" cy="62" r="6.5" stroke="${accent}" stroke-width="0.6" stroke-dasharray="1.5 1.5" opacity="0.5"/>
+              <circle cx="138" cy="79" r="3.2" stroke="${accent}" stroke-width="1" fill="${accentBg}"/>
+              <circle cx="155" cy="79" r="3.2" stroke="${accent}" stroke-width="1" fill="${accentBg}"/>
+              <circle cx="183" cy="79" r="3.2" stroke="${accent}" stroke-width="1" fill="${accentBg}"/>
+
+              <!-- Monitor Stand -->
+              <path d="M110 98 L130 98 L126 111 L114 111 Z" stroke="${accent}" stroke-width="1.3" fill="${accentBg}"/>
+              <rect x="96" y="111" width="48" height="4.5" rx="1.8" stroke="${accent}" stroke-width="1.3" fill="${accentBgSub}"/>
+              <line x1="102" y1="113.2" x2="138" y2="113.2" stroke="${accent}" stroke-width="0.6" opacity="0.6"/>
+
+              <!-- Desk Surface / Mat Guideline -->
+              <line x1="20" y1="118" x2="220" y2="118" stroke="${accent}" stroke-width="0.7" stroke-dasharray="4 2.5" opacity="0.45"/>
+
+              <!-- Keyboard -->
+              <polygon points="68,120 172,120 166,128 74,128" stroke="${accent}" stroke-width="1.2" fill="${accentBg}"/>
+              <line x1="77" y1="122.5" x2="163" y2="122.5" stroke="${accent}" stroke-width="0.8" stroke-dasharray="2 1.5"/>
+              <line x1="76" y1="125" x2="164" y2="125" stroke="${accent}" stroke-width="0.8" stroke-dasharray="2 1.5"/>
+              <line x1="105" y1="126.8" x2="135" y2="126.8" stroke="${accent}" stroke-width="1.3"/>
+
+              <!-- Ergonomic Mouse -->
+              <rect x="182" y="121" width="11" height="7.5" rx="3.5" stroke="${accent}" stroke-width="1.1" fill="${accentBg}"/>
+              <line x1="187.5" y1="121" x2="187.5" y2="124" stroke="${accent}" stroke-width="0.8"/>
+            </svg>
+          </div>
+          <h1 class="cover-bp-title">${title}</h1>
+          <div class="cover-bp-rule-accent"></div>
         </div>
-        <span class="cover-min-serial">ICPC-STD // 2026</span>
-      </div>
-      <div class="cover-min-body">
-        <h1 class="cover-min-title">${title}</h1>
-        <div class="cover-min-rule-wrap">
-          <div class="cover-min-rule"></div>
-          <span class="cover-min-coord">BUILD SEC. 01</span>
+
+        <div class="cover-bp-block">
+          <table class="cover-bp-table">
+            <tr>
+              <td class="cover-bp-cell cover-bp-cell-main">
+                <div class="cover-bp-label">INSTITUTION / UNIVERSITY</div>
+                <div class="cover-bp-val-lg">${instVal}</div>
+              </td>
+            </tr>
+            <tr>
+              <td class="cover-bp-cell">
+                <div class="cover-bp-label">CONTEST TEAM IDENTITY</div>
+                <div class="cover-bp-val">${teamVal}</div>
+              </td>
+            </tr>
+          </table>
         </div>
-        <div class="cover-min-meta">
-          ${inst ? `<div class="cover-min-inst">${inst}</div>` : ""}
-          ${team ? `<div class="cover-min-team">${team}</div>` : ""}
-        </div>
-      </div>
-      <div class="cover-min-footer">
-        <span>COMPETITIVE PROGRAMMING REFERENCE</span>
-        <span>VERIFIED COMPILATION</span>
-      </div>
-    </div>`;
+      </div>`;
+  }
+
+  // Fallback to Editorial (Sketch) cover
+  return coverPageHtml("sketch", bookTitle, teamName, institutionName);
 }
 
 function renderPreview() {
@@ -1981,7 +2106,8 @@ function renderPreview() {
   const bookTitle = state.settings.book_title || "Contest Codebook";
   const teamName = state.settings.team_name || "";
   const instName = state.settings.institution_name || "";
-  const coverStyle = state.settings.cover_style || "minimal";
+  let coverStyle = state.settings.cover_style || "sketch";
+  if (coverStyle === "minimal") coverStyle = "sketch";
   const topicsWithSnippets = state.topics.filter((t) => t.snippets.length > 0);
   const headerLeft = headerLeftHtml();
 
@@ -3799,9 +3925,11 @@ function setPrintEnabled(enabled) {
 }
 
 function onPrintPdf() {
+  const currentBookTitle = (state.settings && state.settings.book_title && state.settings.book_title.trim()) || "Contest Codebook";
+  const safeTitle = currentBookTitle.replace(/[\\/*?:"<>|]+/g, "").trim() || "codebook";
   const a = document.createElement("a");
   a.href = "/download?t=" + Date.now();
-  a.download = "codebook.pdf";
+  a.download = safeTitle + ".pdf";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -3841,8 +3969,14 @@ async function buildPdf() {
 
   setTimeout(() => {
     updateNavBuildExport("success", "PDF Ready!", 100);
+    const originalDocTitle = document.title;
+    const currentBookTitle = (state.settings && state.settings.book_title && state.settings.book_title.trim()) || "Contest Codebook";
+    document.title = currentBookTitle;
     window.print();
     setStatus(`Export ready — ${count} page${count !== 1 ? "s" : ""}. Choose 'Save as PDF' in the print dialog.`, "success");
+    setTimeout(() => {
+      document.title = originalDocTitle;
+    }, 1500);
   }, 100);
 }
 
@@ -5031,11 +5165,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const inst = $("institution-name").value || "";
     const team = $("team-name").value || "";
 
-    document.querySelectorAll(".cover-sketch-title, .csk-title, .cover-min-title, .cover-minimal h1, .cover-banner-content h1, .cover-frame h1, .cover-geo-text h1, .cover-term-title-highlight, .cover-term-title-out").forEach((el) => {
+    document.querySelectorAll(".cover-sketch-title, .csk-title, .cover-min-title, .cover-minimal h1, .cover-banner-content h1, .cover-frame h1, .cover-geo-text h1, .cover-term-title-highlight, .cover-term-title-out, .cover-bp-title").forEach((el) => {
       el.textContent = title;
     });
-    document.querySelectorAll(".cover-sketch-inst, .csk-inst, .cover-min-inst, .cover-inst, .term-inst-out").forEach((el) => el.textContent = inst);
-    document.querySelectorAll(".cover-sketch-team-pill, .cover-sketch-team, .csk-team, .cover-min-team, .cover-team, .term-team-out").forEach((el) => el.textContent = team);
+    document.querySelectorAll(".cover-sketch-inst, .csk-inst, .cover-min-inst, .cover-inst, .term-inst-out, .cover-bp-val-lg").forEach((el) => el.textContent = inst || (el.classList.contains("cover-bp-val-lg") ? "COMPETITIVE PROGRAMMING UNION" : ""));
+    document.querySelectorAll(".cover-sketch-team-pill, .cover-sketch-team, .csk-team, .cover-min-team, .cover-team, .term-team-out, .cover-bp-table .cover-bp-val").forEach((el) => {
+      if (el.textContent && el.textContent.includes("COMPLIANT")) return;
+      el.textContent = team || (el.classList.contains("cover-bp-val") ? "UNREGISTERED TEAM" : "");
+    });
     document.querySelectorAll(".page-header-left").forEach((el) => {
       el.textContent = [inst, team].filter(Boolean).join(" • ");
     });

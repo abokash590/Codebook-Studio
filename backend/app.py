@@ -1284,14 +1284,22 @@ def download():
             404,
         )
 
-    # Determine personalized download filename
+    # Determine personalized download filename from book title (or team name fallback)
     download_name = "codebook.pdf"
     conn = get_db()
+    title_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'book_title'", (uid,)).fetchone()
     team_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'team_name'", (uid,)).fetchone()
     conn.close()
-    if team_row and team_row["value"].strip():
-        safe_team = re.sub(r'[^a-zA-Z0-9_\-]+', '_', team_row["value"].strip())
-        download_name = f"codebook_{safe_team}.pdf"
+
+    raw_title = ""
+    if title_row and title_row["value"] and title_row["value"].strip():
+        raw_title = title_row["value"].strip()
+    elif team_row and team_row["value"] and team_row["value"].strip():
+        raw_title = f"codebook_{team_row['value'].strip()}"
+
+    if raw_title:
+        safe_title = re.sub(r'[\\/*?:"<>|]+', '', raw_title).strip()
+        download_name = f"{safe_title}.pdf" if safe_title else "codebook.pdf"
 
     return send_file(str(pdf_path), as_attachment=True, download_name=download_name)
 

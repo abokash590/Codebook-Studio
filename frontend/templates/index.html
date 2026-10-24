@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Codebook Studio | ICPC Team Reference Notebook Builder</title>
+  <title>Codebook Studio</title>
   <meta name="description" content="High-density, tournament-compliant ICPC reference notebook compiler. Design, organize, and compile algorithmic codebooks into clean, print-ready A4 PDF documents with real-time live preview.">
   <meta name="keywords" content="ICPC, Codebook, Competitive Programming, Algorithm Reference, WeasyPrint, Team Notebook, PDF Compiler">
   <meta name="theme-color" content="#0B0D11">
 
   <!-- Open Graph / Social Sharing (Facebook, Discord, LinkedIn, WhatsApp) -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Codebook Studio | ICPC Team Reference Notebook Builder">
+  <meta property="og:title" content="Codebook Studio">
   <meta property="og:description" content="Design, organize, and compile world-class algorithmic libraries into clean, print-ready A4 team notebooks with real-time live preview.">
   <meta property="og:image" content="{{ url_for('static', filename='favicon.png') }}">
 
@@ -279,26 +279,17 @@
           </div>
         </div>
 
-        <!-- Section 3: Cover Theme (3 Options Only) -->
+        <!-- Section 3: Cover Theme (3 Signature Layouts) -->
         <div class="studio-card">
           <div class="studio-card-head">
             <span class="studio-card-title">Cover Theme</span>
-            <span class="studio-badge-subtle">3 Layouts</span>
+            <span class="studio-badge-subtle">3 Signature Layouts</span>
           </div>
 
           <div class="cover-visual-picker trio" id="cover-visual-picker">
-            <div class="cover-thumb-card active" data-style="minimal">
-              <div class="cover-thumb-preview thumb-minimal">
-                <span class="thumb-line-sm"></span>
-                <span class="thumb-title">Title</span>
-                <span class="thumb-rule"></span>
-              </div>
-              <span class="cover-thumb-name">Minimal</span>
-            </div>
-            <div class="cover-thumb-card" data-style="sketch">
+            <div class="cover-thumb-card active" data-style="sketch">
               <div class="cover-thumb-preview thumb-sketch">
-                <span class="thumb-badge">Notebook</span>
-                <span class="thumb-title serif">Title</span>
+                <span class="thumb-title gebuk-bold">Editorial</span>
                 <span class="thumb-rule-accent"></span>
               </div>
               <span class="cover-thumb-name">Editorial</span>
@@ -308,15 +299,27 @@
                 <div class="thumb-term-bar">
                   <span></span><span></span><span></span>
                 </div>
-                <span class="thumb-term-prompt">$ code</span>
+                <span class="thumb-term-prompt">&gt; nvim</span>
+                <span class="thumb-term-line"></span>
+                <span class="thumb-term-sub"></span>
               </div>
-              <span class="cover-thumb-name">Terminal</span>
+              <span class="cover-thumb-name">Terminal Pro</span>
+            </div>
+            <div class="cover-thumb-card" data-style="blueprint">
+              <div class="cover-thumb-preview thumb-blueprint">
+                <span class="thumb-bp-cross top-left">+</span>
+                <span class="thumb-bp-cross bottom-right">+</span>
+                <span class="thumb-bp-desk"></span>
+                <span class="thumb-title mono">Blueprint</span>
+                <span class="thumb-bp-cad"></span>
+              </div>
+              <span class="cover-thumb-name">Technical Blueprint</span>
             </div>
           </div>
           <select id="cover-style" style="display:none;">
-            <option value="minimal">Minimal</option>
             <option value="sketch">Editorial</option>
-            <option value="terminal">Terminal</option>
+            <option value="terminal">Terminal Pro</option>
+            <option value="blueprint">Technical Blueprint</option>
           </select>
         </div>
 

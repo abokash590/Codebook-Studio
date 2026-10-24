@@ -1852,18 +1852,27 @@ html, body {
   text-align: center;
 }
 
-/* ---------- COVER VISUAL PICKER (3 MODERN STYLES) ---------- */
+/* ---------- COVER VISUAL PICKER (4 ELITE TOURNAMENT STYLES) ---------- */
 .cover-visual-picker {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-top: 4px;
 }
+.cover-visual-picker.quad {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+@media (max-width: 600px) {
+  .cover-visual-picker.quad {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 .cover-thumb-card {
   background: #FFFFFF;
   border: 1.5px solid rgba(0, 0, 0, 0.08);
   border-radius: 10px;
-  padding: 8px 6px 9px;
+  padding: 8px 4px 9px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -1902,14 +1911,29 @@ html, body {
 }
 .thumb-title { font-size: 7.5px; font-weight: 700; color: #111110; }
 .thumb-title.serif { font-family: 'Newsreader', serif; font-size: 8.5px; }
+.thumb-title.gebuk-bold { font-family: 'Gebuk', -apple-system, BlinkMacSystemFont, sans-serif !important; font-size: 7.5px; font-weight: 700; -webkit-text-stroke: 0.3px #111110; }
+.thumb-title.mono { font-family: 'JetBrains Mono', monospace; font-size: 6px; letter-spacing: -0.2px; }
 .thumb-line-sm { width: 14px; height: 1px; background: rgba(0, 0, 0, 0.18); margin-bottom: 4px; }
 .thumb-rule { width: 18px; height: 1.5px; background: rgba(0, 0, 0, 0.25); margin-top: 4px; border-radius: 1px; }
 .thumb-rule-accent { width: 18px; height: 1.5px; background: var(--ui-accent, #0071E3); margin-top: 4px; border-radius: 1px; }
-.thumb-badge { font-size: 5.5px; font-family: sans-serif; background: rgba(0, 0, 0, 0.06); padding: 1px 4px; border-radius: 2px; margin-bottom: 2px; }
-.thumb-term-bar { width: 100%; height: 6px; background: #ECEBE8; position: absolute; top: 0; display: flex; gap: 2px; padding: 1.5px 3px; }
+.thumb-badge { font-size: 5px; font-family: sans-serif; background: rgba(0, 0, 0, 0.06); padding: 1px 3px; border-radius: 2px; margin-bottom: 2px; }
+.thumb-terminal {
+  background: #FAFAF9 !important;
+  border-color: #E2E1DC !important;
+}
+.thumb-term-bar { width: 100%; height: 6px; background: #F0EFEB; position: absolute; top: 0; display: flex; gap: 2px; padding: 1.5px 3px; border-bottom: 0.5px solid #E2E1DC; }
 .thumb-term-bar span { width: 2.5px; height: 2.5px; border-radius: 50%; background: #FF5F56; }
-.thumb-term-prompt { font-size: 5.5px; font-family: monospace; color: #111110; margin-top: 5px; }
-.cover-thumb-name { font-size: 11px; font-weight: 500; color: #6E6D68; }
+.thumb-term-bar span:nth-child(2) { background: #FFBD2E; }
+.thumb-term-bar span:nth-child(3) { background: #27C93F; }
+.thumb-term-prompt { font-size: 5.5px; font-family: monospace; color: #0284C7; font-weight: 700; margin-top: 5px; }
+.thumb-term-line { width: 24px; height: 2px; background: #1C1917; border-radius: 1px; margin-top: 3px; }
+.thumb-blueprint { background: radial-gradient(circle, rgba(2, 132, 199, 0.18) 0.5px, transparent 0.5px); background-size: 4px 4px; border-color: rgba(2, 132, 199, 0.35); }
+.thumb-bp-cross { position: absolute; font-size: 6px; color: #0284C7; font-weight: 700; line-height: 1; font-family: monospace; }
+.thumb-bp-cross.top-left { top: 2px; left: 2px; }
+.thumb-bp-cross.bottom-right { bottom: 2px; right: 2px; }
+.thumb-bp-desk { width: 14px; height: 7px; border: 0.8px solid #0284C7; border-radius: 1px; background: rgba(2, 132, 199, 0.1); margin-top: 1px; }
+.thumb-bp-cad { width: 28px; height: 7px; border: 0.5px solid #0284C7; background: rgba(2, 132, 199, 0.08); margin-top: 2px; }
+.cover-thumb-name { font-size: 10px; font-weight: 600; color: #6E6D68; text-align: center; }
 .cover-thumb-card.active .cover-thumb-name { color: #0E0E0E; font-weight: 700; }
 
 /* ---------- CARD THEME PICKER THUMBNAILS ---------- */
@@ -4140,8 +4164,17 @@ pre.card-code, pre.boilerplate-code {
   position: absolute; top: 8mm; left: 12mm;
   font-size: 8.5px; font-weight: 600;
   letter-spacing: 0.03em;
-  color: #8F8E8B;
+  color: #55534D;
   display: flex; align-items: center; gap: 6px;
+}
+.page-header-left .hdr-sep {
+  font-size: 6px;
+  color: var(--accent);
+  opacity: 0.85;
+}
+.page-header-left .hdr-team {
+  color: #78716C;
+  font-weight: 500;
 }
 .page-header-left::after { display: none; }
 
@@ -4163,15 +4196,17 @@ pre.card-code, pre.boilerplate-code {
 /* Modern Minimalist Page Number Capsule */
 .a4-page .page-number {
   position: absolute; top: 8mm; right: 12mm;
-  font-size: 9px; font-weight: 500;
+  font-size: 9px; font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
-  color: #8F8E8B;
-  background: rgba(0, 0, 0, 0.035);
-  padding: 2px 7px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, #FFFFFF);
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  padding: 1.5px 7.5px;
   border-radius: 999px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
   display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .cover-team { font-size: 13px; color: var(--muted); margin: 0; }
@@ -4266,147 +4301,107 @@ pre.card-code, pre.boilerplate-code {
 .csd-11 { top: 22%; right: 5%; font-size: 11px; transform: rotate(3deg); opacity: 0.08; }
 .csd-12 { top: 92%; left: 52%; font-size: 11px; transform: rotate(-2deg); opacity: 0.07; }
 
-/* ---- Editorial Cover (Craft.do / Princeton Academic Edition) ---- */
+/* ---- 1. Editorial Cover (Princeton / MIT Academic Monograph Edition) ---- */
 .cover-sketch-body, .csk-body {
   position: relative; z-index: 1;
   display: flex; flex-direction: column;
   align-items: center; text-align: center;
-  max-width: 146mm;
-  padding: 16mm 10mm;
+  max-width: 155mm;
+  padding: 10mm 8mm;
 }
 .cover-sketch-eyebrow, .csk-eyebrow {
   display: inline-flex; align-items: center; gap: 7px;
-  font-family: 'Inter', sans-serif;
-  font-size: 9px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--accent);
   background: rgba(0, 0, 0, 0.035);
   padding: 4px 14px; border-radius: 999px;
-  margin-bottom: 8mm;
+  margin-bottom: 7mm;
 }
-.cover-sketch-eyebrow-sep {
-  opacity: 0.4;
-}
+.cover-sketch-eyebrow-sep { opacity: 0.4; }
 .cover-sketch-title, .csk-title {
-  font-family: 'Newsreader', 'Source Serif 4', Georgia, serif;
-  font-size: 40px; font-weight: 600; font-style: italic;
+  font-family: 'Gebuk', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 44px; font-weight: 700; font-style: normal;
   line-height: 1.15; color: #0E0E0E;
-  margin: 0 0 6mm; letter-spacing: -0.025em;
+  margin: 0 0 6mm; letter-spacing: 0.02em;
+  -webkit-text-stroke: 0.5px #0E0E0E;
 }
 .cover-sketch-rule-row {
   display: flex; align-items: center; justify-content: center;
-  gap: 12px; margin: 0 auto 7mm; width: 100%;
+  gap: 12px; margin: 0 auto 6mm; width: 100%;
 }
-.csk-line {
-  height: 1px; width: 28mm; background: rgba(0, 0, 0, 0.14);
-}
-.csk-diamond {
-  font-size: 8px; color: var(--accent);
-}
+.csk-line { height: 1px; width: 28mm; background: rgba(0, 0, 0, 0.14); }
+.csk-diamond { font-size: 8px; color: var(--accent); }
 .cover-sketch-meta, .csk-meta {
   display: flex; flex-direction: column; align-items: center;
-  gap: 6px; margin-bottom: 6mm;
+  gap: 5px; margin-bottom: 6mm;
 }
 .cover-sketch-inst, .csk-inst {
-  font-size: 10.5px; font-weight: 700; letter-spacing: 1.3px;
+  font-size: 10px; font-weight: 700; letter-spacing: 1.3px;
   text-transform: uppercase; color: var(--accent); margin: 0; opacity: 0.95;
 }
 .cover-sketch-team-pill {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 13.5px; font-weight: 600;
+  font-size: 13.5px; font-weight: 700;
   color: #111110;
   background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 4px 14px; border-radius: 6px; margin-top: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  padding: 4px 16px; border-radius: 6px; margin-top: 2px;
+}
+.cover-sketch-roster {
+  width: 100%; max-width: 135mm; margin-top: 4mm;
+  border: 1px dashed rgba(0, 0, 0, 0.16); border-radius: 6px;
+  padding: 10px 14px; background: rgba(0, 0, 0, 0.015);
+}
+.cover-sketch-roster-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; font-weight: 700; letter-spacing: 1.2px;
+  color: #71717A; text-align: center; margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.cover-sketch-roster-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+}
+.cover-sketch-sign-box {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.cover-sketch-sign-line {
+  width: 100%; border-bottom: 1px dotted #A1A1AA; height: 16px;
+}
+.cover-sketch-sign-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 7.5px; font-weight: 600; color: #71717A;
+  text-transform: uppercase; letter-spacing: 0.4px;
 }
 .cover-sketch-footer {
-  font-size: 9px; font-weight: 600; letter-spacing: 0.14em;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; font-weight: 600; letter-spacing: 0.14em;
   text-transform: uppercase; color: #9E9D97; margin-top: 6mm;
 }
 
 /* Explicit padding for all standard covers */
-.cover-minimal, .cover-banner, .cover-frame, .cover-terminal, .cover-geometric {
+.cover-banner, .cover-frame, .cover-terminal, .cover-geometric, .cover-blueprint {
   padding: 14mm;
   box-sizing: border-box;
 }
 
-/* ---- Minimal Cover (Swiss / Apple Architectural Design) ---- */
-.cover-minimal {
-  padding: 24mm 18mm !important;
-  display: flex; flex-direction: column; justify-content: space-between;
-  text-align: left; background: #FFFFFF;
-}
-.cover-min-inner {
-  display: flex; flex-direction: column; justify-content: space-between;
-  height: 100%; width: 100%;
-}
-.cover-min-header {
-  display: flex; align-items: center; justify-content: space-between;
-}
-.cover-min-badge {
-  display: inline-flex; align-items: center; gap: 7px;
-  font-size: 9px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--accent); background: rgba(0, 0, 0, 0.035);
-  padding: 4px 10px; border-radius: 999px;
-}
-.cover-min-badge-dot {
-  width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
-}
-.cover-min-serial {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9px; color: #8E8D88; letter-spacing: 0.08em;
-}
-.cover-min-body {
-  margin: auto 0; padding: 18mm 0;
-}
-.cover-min-title {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 40px; font-weight: 800; line-height: 1.12;
-  letter-spacing: -0.04em; color: #0E0E0E; margin: 0 0 10mm;
-}
-.cover-min-rule-wrap {
-  display: flex; align-items: center; gap: 12px; margin-bottom: 10mm;
-}
-.cover-min-rule {
-  height: 2px; width: 48mm; background: var(--accent); border-radius: 999px;
-}
-.cover-min-coord {
-  font-family: 'JetBrains Mono', monospace; font-size: 8.5px;
-  color: #A8A69E; letter-spacing: 0.1em;
-}
-.cover-min-meta {
-  display: flex; flex-direction: column; gap: 6px;
-}
-.cover-min-inst {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.14em;
-  text-transform: uppercase; color: var(--accent);
-}
-.cover-min-team {
-  font-size: 19px; font-weight: 700; letter-spacing: -0.01em; color: #111110;
-}
-.cover-min-footer {
-  display: flex; align-items: center; justify-content: space-between;
-  border-top: 1px solid rgba(0, 0, 0, 0.08); padding-top: 5mm;
-  font-size: 9px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: #8E8D88;
-}
-
-/* ---- Terminal Cover (macOS Crisp Light Theme Terminal Window) ---- */
+/* ---- 2. Terminal Cover (macOS Minimal Warm Editor Window) ---- */
 .cover-terminal {
-  padding: 22mm 16mm !important;
+  padding: 18mm 14mm !important;
   display: flex; align-items: center; justify-content: center;
   background: #FFFFFF;
 }
 .cover-term-window {
   width: 100%; max-width: 172mm;
-  background: #FFFFFF; border: 1.5px solid #E4E4E7;
+  background: #FAFAF9; border: 1.5px solid #E2E1DC;
   border-radius: 12px; overflow: hidden;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 16px 36px rgba(28, 25, 23, 0.06), 0 2px 6px rgba(28, 25, 23, 0.03);
   font-family: 'JetBrains Mono', monospace;
 }
 .cover-term-titlebar {
-  background: #F4F4F5; padding: 9px 14px;
+  background: #F0EFEB; padding: 8px 14px;
   display: flex; align-items: center; justify-content: space-between;
-  border-bottom: 1.5px solid #E4E4E7; user-select: none;
+  border-bottom: 1.5px solid #E2E1DC; user-select: none;
 }
 .cover-term-traffic {
   display: flex; align-items: center; gap: 7px;
@@ -4419,39 +4414,93 @@ pre.card-code, pre.boilerplate-code {
 .cover-term-btn-yellow { background: #FFBD2E; }
 .cover-term-btn-green { background: #27C93F; }
 .cover-term-tab {
-  font-size: 10.5px; font-weight: 600; color: #52525B; letter-spacing: 0.02em;
+  font-size: 10px; font-weight: 600; color: #44403C; letter-spacing: 0.02em;
 }
 .cover-term-session {
-  font-size: 9.5px; color: #71717A; font-weight: 500;
+  font-size: 9px; color: #78716C; font-weight: 500;
 }
 .cover-term-body {
-  padding: 10mm 9mm 12mm; font-size: 11.5px; line-height: 1.65; color: #18181B;
-  background: #FFFFFF;
+  padding: 9mm 9mm 11mm; font-size: 11.5px; line-height: 1.6; color: #1C1917;
+  background: #FAFAF9;
 }
 .cover-term-row {
   margin: 0 0 5px; display: flex; align-items: baseline; gap: 8px;
 }
 .cover-term-prompt {
-  color: var(--accent, #0284C7); font-weight: 700; flex-shrink: 0;
+  color: #0284C7; font-weight: 700; flex-shrink: 0;
 }
-.cover-term-cmd { color: #0F172A; font-weight: 600; }
-.cover-term-out { padding-left: 14px; margin: 0 0 12px; }
+.cover-term-cmd { color: #1C1917; font-weight: 600; }
+.cover-term-out { padding-left: 14px; margin: 0 0 10px; }
 .cover-term-title-highlight {
-  font-size: 20px; font-weight: 800; color: #09090B;
-  letter-spacing: -0.02em; padding: 4px 0 6px;
+  font-size: 20px; font-weight: 800; color: #0C0A09;
+  letter-spacing: -0.02em; padding: 2px 0 5px;
 }
-.cover-term-inst-out { color: #0284C7; font-weight: 650; font-size: 13px; }
-.cover-term-team-out { color: #16A34A; font-weight: 700; font-size: 13.5px; }
-.cover-term-success { color: #52525B; font-size: 10.5px; font-weight: 500; }
-.cover-term-success span { color: #16A34A; font-weight: 800; }
+.cover-term-inst-out { color: #0284C7; font-weight: 700; font-size: 13px; }
+.cover-term-team-out { color: #15803D; font-weight: 800; font-size: 14px; }
 .cover-term-cursor {
   display: inline-block; color: var(--accent, #0284C7);
   animation: termBlink 1s infinite;
 }
-@keyframes termBlink {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0; }
+.cover-term-statusline {
+  background: #F0EFEB; color: #44403C; padding: 7px 14px;
+  font-size: 9px; font-family: 'JetBrains Mono', monospace;
+  display: flex; align-items: center; justify-content: space-between; font-weight: 600;
+  border-top: 1.5px solid #E2E1DC;
 }
+.cover-term-mode {
+  background: var(--accent, #0284C7); color: #FAFAF9;
+  padding: 2px 7px; border-radius: 3px; font-weight: 800; margin-right: 8px;
+}
+.cover-term-filepath { color: #1C1917; margin-right: 6px; }
+.cover-term-flags { color: #D97706; }
+.cover-term-status-right { display: flex; gap: 8px; color: #78716C; }
+
+/* ---- 3. Technical Blueprint (CERN Precision Grid) ---- */
+.cover-blueprint {
+  --bp-color: var(--accent, #0284C7);
+  padding: 12mm !important;
+  display: flex; align-items: stretch; justify-content: stretch;
+  background: #FFFFFF;
+}
+.cover-bp-inner {
+  width: 100%; height: 100%; border: 1.5px solid var(--bp-color); position: relative;
+  display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center;
+  padding: 24px 24px 38px; box-sizing: border-box;
+  background: radial-gradient(circle, color-mix(in srgb, var(--bp-color) 12%, transparent) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.cover-bp-corner {
+  position: absolute; font-family: 'JetBrains Mono', monospace;
+  font-size: 16px; font-weight: 700; color: var(--bp-color); line-height: 1;
+}
+.cover-bp-tl { top: -8px; left: -8px; }
+.cover-bp-tr { top: -8px; right: -8px; }
+.cover-bp-bl { bottom: -8px; left: -8px; }
+.cover-bp-br { bottom: -8px; right: -8px; }
+.cover-bp-center { text-align: center; margin: auto 0; width: 100%; }
+.cover-bp-schematic { margin-bottom: 22px; }
+.cover-bp-desktop-svg { display: block; margin: 0 auto; width: 250px; max-width: 90%; height: auto; }
+.cover-bp-title {
+  font-family: 'Inter', sans-serif; font-size: 34px; font-weight: 900;
+  letter-spacing: -0.02em; color: #0F172A; text-transform: uppercase;
+  margin: 0 0 10px;
+}
+.cover-bp-rule-accent { width: 42px; height: 2.5px; background: var(--bp-color); margin: 0 auto; opacity: 0.85; border-radius: 1px; }
+.cover-bp-block { width: 100%; max-width: 580px; margin: 0 auto 14px; }
+.cover-bp-table {
+  width: 100%; border-collapse: collapse; border: 1.5px solid var(--bp-color);
+  font-family: 'JetBrains Mono', monospace; background: #FFFFFF;
+}
+.cover-bp-cell {
+  border: 1px solid var(--bp-color); padding: 9px 14px; text-align: left; vertical-align: top; width: 100%;
+}
+.cover-bp-cell-main { background: color-mix(in srgb, var(--bp-color) 5%, #FFFFFF); }
+.cover-bp-label {
+  font-size: 8px; font-weight: 700; color: var(--bp-color); text-transform: uppercase;
+  letter-spacing: 1px; margin-bottom: 4px;
+}
+.cover-bp-val-lg { font-size: 13.5px; font-weight: 800; color: #0F172A; letter-spacing: 0.3px; line-height: 1.35; }
+.cover-bp-val { font-size: 13px; font-weight: 800; color: #0F172A; letter-spacing: 0.3px; }
 
 /* ================= DOCUMENT CARDS & SNIPPETS ================= */
 .card-topic-title {

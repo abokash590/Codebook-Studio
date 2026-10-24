@@ -336,7 +336,7 @@ DEFAULT_SETTINGS = {
     "institution_name": "",
     "boilerplate_code": DEFAULT_BOILERPLATE_CODE,
     "show_boilerplate": "1",
-    "cover_style": "minimal",
+    "cover_style": "sketch",
     "card_style": "craft",
     "template_accent_color": "#2C2C2A",
     "template_title": "Template",
