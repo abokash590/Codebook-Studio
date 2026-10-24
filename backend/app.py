@@ -1034,7 +1034,7 @@ def api_settings_update():
                 if not last_log or (now - last_log["created_at"]) > 900:
                     conn.execute(
                         """UPDATE institutions
-                           SET use_count = use_count + 1, last_used_at = ?
+                           SET workspace_count = workspace_count + 1, use_count = use_count + 1, last_used_at = ?
                            WHERE id = ?""",
                         (now, existing["id"]),
                     )
@@ -1060,8 +1060,8 @@ def api_settings_update():
                 valid, reason = is_valid_new_institution_name(inst_name, conn)
                 if valid:
                     conn.execute(
-                        """INSERT INTO institutions (name, short_name, status, use_count, suggested_by, created_at, last_used_at)
-                           VALUES (?, '', 'pending', 1, ?, ?, ?)""",
+                        """INSERT INTO institutions (name, short_name, status, use_count, build_count, workspace_count, suggested_by, created_at, last_used_at)
+                           VALUES (?, '', 'pending', 1, 0, 1, ?, ?, ?)""",
                         (inst_name, uid, now, now),
                     )
                     team_val = str(d.get("team_name") or "").strip()
@@ -1164,7 +1164,7 @@ def api_track_export():
         clean_inst = re.sub(r'\s*\([^)]*\)', '', inst_name).strip()
         conn.execute(
             """UPDATE institutions
-               SET use_count = use_count + 1, last_used_at = ?
+               SET build_count = build_count + 1, use_count = use_count + 1, last_used_at = ?
                WHERE LOWER(name) = LOWER(?)
                   OR LOWER(name) = LOWER(?)
                   OR (short_name != '' AND LOWER(short_name) = LOWER(?))""",
@@ -1237,7 +1237,7 @@ def api_build():
                 clean_inst = re.sub(r'\s*\([^)]*\)', '', inst_name).strip()
                 conn.execute(
                     """UPDATE institutions
-                       SET use_count = use_count + 1, last_used_at = ?
+                       SET build_count = build_count + 1, use_count = use_count + 1, last_used_at = ?
                        WHERE LOWER(name) = LOWER(?)
                           OR LOWER(name) = LOWER(?)
                           OR (short_name != '' AND LOWER(short_name) = LOWER(?))""",
@@ -1346,21 +1346,21 @@ def api_admin_stats():
 
     # University & Team analytics
     total_unis_count = conn.execute("SELECT COUNT(*) FROM institutions").fetchone()[0]
-    total_distinct_unis_used = conn.execute("SELECT COUNT(*) FROM institutions WHERE use_count > 0").fetchone()[0]
+    total_distinct_unis_used = conn.execute("SELECT COUNT(*) FROM institutions WHERE use_count > 0 OR build_count > 0 OR workspace_count > 0").fetchone()[0]
     pending_suggestions_count = conn.execute("SELECT COUNT(*) FROM institutions WHERE status = 'pending'").fetchone()[0]
 
     top_unis = [dict(r) for r in conn.execute("""
-        SELECT id, name, short_name, use_count
+        SELECT id, name, short_name, use_count, build_count, workspace_count
         FROM institutions
-        WHERE use_count > 0
-        ORDER BY use_count DESC
+        WHERE use_count > 0 OR build_count > 0 OR workspace_count > 0
+        ORDER BY build_count DESC, workspace_count DESC, use_count DESC
         LIMIT 6
     """).fetchall()]
 
     # If no universities have use_count > 0 yet, grab sample top institutions for preview
     if not top_unis:
         top_unis = [dict(r) for r in conn.execute("""
-            SELECT id, name, short_name, use_count
+            SELECT id, name, short_name, use_count, build_count, workspace_count
             FROM institutions
             ORDER BY id ASC
             LIMIT 5
@@ -1550,9 +1550,9 @@ def api_admin_starter_pack():
 def api_admin_institutions():
     conn = get_db()
     rows = conn.execute("""
-        SELECT id, name, short_name, status, use_count, suggested_by, created_at, last_used_at
+        SELECT id, name, short_name, status, use_count, build_count, workspace_count, suggested_by, created_at, last_used_at
         FROM institutions
-        ORDER BY CASE WHEN status = 'pending' THEN 0 ELSE 1 END, use_count DESC, name ASC
+        ORDER BY CASE WHEN status = 'pending' THEN 0 ELSE 1 END, build_count DESC, workspace_count DESC, name ASC
     """).fetchall()
 
     # Match associated teams for each university
@@ -1621,8 +1621,8 @@ def api_admin_institution_add():
 
     now = int(time.time())
     cur = conn.execute(
-        """INSERT INTO institutions (name, short_name, status, use_count, suggested_by, created_at, last_used_at)
-           VALUES (?, ?, 'approved', 0, 'admin', ?, ?)""",
+        """INSERT INTO institutions (name, short_name, status, use_count, build_count, workspace_count, suggested_by, created_at, last_used_at)
+           VALUES (?, ?, 'approved', 0, 0, 0, 'admin', ?, ?)""",
         (name, short_name, now, now),
     )
     new_id = cur.lastrowid

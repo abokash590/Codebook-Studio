@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS institutions (
     short_name TEXT DEFAULT '',
     status TEXT NOT NULL DEFAULT 'approved',
     use_count INTEGER NOT NULL DEFAULT 0,
+    build_count INTEGER NOT NULL DEFAULT 0,
+    workspace_count INTEGER NOT NULL DEFAULT 0,
     suggested_by TEXT DEFAULT '',
     created_at INTEGER NOT NULL,
     last_used_at INTEGER NOT NULL
@@ -549,13 +551,40 @@ def init_db():
             short_map = json.loads(short_path.read_text(encoding="utf-8"))
         except Exception:
             pass
+    # Ensure build_count & workspace_count columns exist in institutions
+    inst_cols = [c[1] for c in conn.execute("PRAGMA table_info(institutions)").fetchall()]
+    if "build_count" not in inst_cols:
+        conn.execute("ALTER TABLE institutions ADD COLUMN build_count INTEGER NOT NULL DEFAULT 0")
+    if "workspace_count" not in inst_cols:
+        conn.execute("ALTER TABLE institutions ADD COLUMN workspace_count INTEGER NOT NULL DEFAULT 0")
+
+    # Sync / backfill build_count from actual build_logs for accuracy
+    try:
+        conn.execute("""
+            UPDATE institutions
+            SET build_count = (
+                SELECT COUNT(*) FROM build_logs
+                WHERE LOWER(build_logs.institution_name) = LOWER(institutions.name)
+                   OR (institutions.short_name != '' AND LOWER(build_logs.institution_name) = LOWER(institutions.short_name))
+            )
+            WHERE build_count = 0
+        """)
+        # Backfill workspace_count from use_count - build_count if use_count > 0
+        conn.execute("""
+            UPDATE institutions
+            SET workspace_count = MAX(0, use_count - build_count)
+            WHERE workspace_count = 0 AND use_count > 0
+        """)
+    except Exception:
+        pass
+
     now = int(time.time())
     for n in names:
         short = short_map.get(n, "")
         conn.execute(
             """INSERT OR IGNORE INTO institutions
-               (name, short_name, status, use_count, suggested_by, created_at, last_used_at)
-               VALUES (?, ?, 'approved', 0, 'system', ?, ?)""",
+               (name, short_name, status, use_count, build_count, workspace_count, suggested_by, created_at, last_used_at)
+               VALUES (?, ?, 'approved', 0, 0, 0, 'system', ?, ?)""",
             (n.strip(), short.strip(), now, now)
         )
 
