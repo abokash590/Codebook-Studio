@@ -55,6 +55,19 @@ CREATE TABLE IF NOT EXISTS institution_logs (
     created_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS site_visits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    visitor_id TEXT NOT NULL,
+    user_id TEXT NOT NULL DEFAULT 'guest',
+    ip_hash TEXT NOT NULL DEFAULT '',
+    user_agent TEXT NOT NULL DEFAULT '',
+    device_type TEXT NOT NULL DEFAULT 'desktop',
+    path TEXT NOT NULL DEFAULT '/',
+    created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_site_visits_created_at ON site_visits(created_at);
+CREATE INDEX IF NOT EXISTS idx_site_visits_visitor_id ON site_visits(visitor_id);
+
 CREATE TABLE IF NOT EXISTS topics (
     id TEXT NOT NULL,
     user_id TEXT NOT NULL DEFAULT 'guest',
@@ -411,6 +424,20 @@ def _migrate(conn):
             created_at INTEGER NOT NULL
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS site_visits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            visitor_id TEXT NOT NULL,
+            user_id TEXT NOT NULL DEFAULT 'guest',
+            ip_hash TEXT NOT NULL DEFAULT '',
+            user_agent TEXT NOT NULL DEFAULT '',
+            device_type TEXT NOT NULL DEFAULT 'desktop',
+            path TEXT NOT NULL DEFAULT '/',
+            created_at INTEGER NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_site_visits_created_at ON site_visits(created_at)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_site_visits_visitor_id ON site_visits(visitor_id)")
     # Clean up any historic accidental partial-typed pending institutions (e.g. 'my', 'dh')
     try:
         conn.execute("DELETE FROM institutions WHERE status = 'pending' AND (length(name) < 6 OR name NOT LIKE '% %')")

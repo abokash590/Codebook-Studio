@@ -12,7 +12,7 @@ from pathlib import Path
 
 import urllib.parse
 import urllib.request
-from flask import Flask, render_template, request, jsonify, send_file, send_from_directory, session, redirect
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory, session, redirect, make_response
 
 try:
     from backend.db import get_db, init_db, purge_expired_trash
@@ -183,13 +183,61 @@ def api_health():
     return jsonify({"status": "ok", "timestamp": int(time.time())})
 
 
+# ---------- Visitor Traffic Logger ----------
+
+def log_site_visit(path: str = "/"):
+    """Tracks human visitors with 60-second debounce per visitor to avoid noise."""
+    try:
+        ua = (request.user_agent.string or "").lower()
+        bot_keywords = ("bot", "spider", "crawler", "uptimerobot", "curl", "wget", "headless", "python-requests", "pingdom")
+        if any(b in ua for b in bot_keywords):
+            return
+
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr or "")
+        if "," in ip:
+            ip = ip.split(",")[0].strip()
+        ip_hash = hashlib.sha256(ip.encode("utf-8")).hexdigest()[:16]
+
+        cookie_vid = request.cookies.get("cb_vid", "")
+        if cookie_vid:
+            visitor_id = cookie_vid
+        else:
+            visitor_id = hashlib.md5(f"{ip}_{ua}".encode("utf-8")).hexdigest()[:18]
+
+        device_type = "mobile" if any(m in ua for m in ("mobi", "android", "iphone", "ipad", "ipod", "windows phone")) else "desktop"
+        uid = session.get("user_id") or "guest"
+        now = int(time.time())
+
+        conn = get_db()
+        recent = conn.execute(
+            "SELECT id FROM site_visits WHERE visitor_id = ? AND created_at > ? LIMIT 1",
+            (visitor_id, now - 60)
+        ).fetchone()
+        if not recent:
+            conn.execute(
+                """INSERT INTO site_visits (visitor_id, user_id, ip_hash, user_agent, device_type, path, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (visitor_id, uid, ip_hash, ua[:180], device_type, path, now)
+            )
+            conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
 # ---------- Page & Assets ----------
 
 @app.route("/")
 @app.route("/login")
 @app.route("/signin")
 def index():
-    return render_template("index.html")
+    log_site_visit(request.path)
+    resp = make_response(render_template("index.html"))
+    if not request.cookies.get("cb_vid"):
+        import uuid
+        vid = f"v_{uuid.uuid4().hex[:12]}"
+        resp.set_cookie("cb_vid", vid, max_age=365 * 24 * 3600, samesite="Lax", httponly=True)
+    return resp
 
 
 @app.route("/mockups")
@@ -1334,10 +1382,52 @@ def api_admin_stats():
         LIMIT 6
     """).fetchall()]
 
+    # Site Visits & Traffic Metrics
+    total_visits = conn.execute("SELECT COUNT(*) FROM site_visits").fetchone()[0]
+    today_visits = conn.execute("SELECT COUNT(*) FROM site_visits WHERE created_at >= ?", (midnight,)).fetchone()[0]
+    unique_visitors = conn.execute("SELECT COUNT(DISTINCT visitor_id) FROM site_visits").fetchone()[0]
+    unique_visitors_today = conn.execute("SELECT COUNT(DISTINCT visitor_id) FROM site_visits WHERE created_at >= ?", (midnight,)).fetchone()[0]
+
+    # Device Split
+    desktop_visits = conn.execute("SELECT COUNT(*) FROM site_visits WHERE device_type = 'desktop'").fetchone()[0]
+    mobile_visits = conn.execute("SELECT COUNT(*) FROM site_visits WHERE device_type = 'mobile'").fetchone()[0]
+    total_device_visits = desktop_visits + mobile_visits
+    desktop_pct = round((desktop_visits / total_device_visits * 100)) if total_device_visits else 70
+    mobile_pct = 100 - desktop_pct if total_device_visits else 30
+
+    # 7-Day Traffic Series for Bar Chart
+    traffic_7_days = []
+    for i in range(6, -1, -1):
+        day_start = midnight - (i * 86400)
+        day_end = day_start + 86400
+        count = conn.execute("SELECT COUNT(*) FROM site_visits WHERE created_at >= ? AND created_at < ?", (day_start, day_end)).fetchone()[0]
+        unique_cnt = conn.execute("SELECT COUNT(DISTINCT visitor_id) FROM site_visits WHERE created_at >= ? AND created_at < ?", (day_start, day_end)).fetchone()[0]
+        time_tuple = time.localtime(day_start)
+        day_label = time.strftime("%a", time_tuple)
+        date_label = time.strftime("%b %d", time_tuple)
+        traffic_7_days.append({
+            "day": day_label,
+            "date": date_label,
+            "visits": count,
+            "unique": unique_cnt,
+            "is_today": i == 0
+        })
+
     conn.close()
 
     return jsonify({
         "ok": True,
+        "traffic": {
+            "total_visits": total_visits,
+            "today_visits": today_visits,
+            "unique_visitors": unique_visitors,
+            "unique_visitors_today": unique_visitors_today,
+            "desktop_visits": desktop_visits,
+            "mobile_visits": mobile_visits,
+            "desktop_pct": desktop_pct,
+            "mobile_pct": mobile_pct,
+            "last_7_days": traffic_7_days,
+        },
         "users": {
             "total": total_users,
             "new_today": new_users_today,

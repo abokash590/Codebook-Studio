@@ -428,6 +428,64 @@
     .kpi-card.emerald .kpi-icon { background: rgba(16, 185, 129, 0.08); color: #059669; }
     .kpi-card.purple .kpi-icon { background: rgba(139, 92, 246, 0.08); color: #7C3AED; }
     .kpi-card.amber .kpi-icon { background: rgba(245, 158, 11, 0.08); color: #D97706; }
+    .kpi-card.cyan .kpi-icon { background: rgba(6, 182, 212, 0.08); color: #0891B2; }
+    .kpi-card.indigo .kpi-icon { background: rgba(99, 102, 241, 0.08); color: #4F46E5; }
+
+    .device-progress-track {
+      width: 100%;
+      height: 7px;
+      border-radius: 4px;
+      background: rgba(139, 92, 246, 0.18);
+      display: flex;
+      overflow: hidden;
+      margin: 4px 0 2px 0;
+    }
+    .device-progress-bar-desktop {
+      background: #0071E3;
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .device-progress-bar-mobile {
+      background: #8B5CF6;
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .traffic-bar-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      justify-content: flex-end;
+      position: relative;
+      padding: 0 4px;
+      border-radius: 6px 6px 0 0;
+      transition: background 0.15s ease;
+    }
+    .traffic-bar-col:hover {
+      background: rgba(0, 113, 227, 0.05);
+    }
+    .traffic-bar-tooltip {
+      position: absolute;
+      top: 6px;
+      background: #1F2937;
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: all 0.15s ease;
+      z-index: 10;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+    .traffic-bar-col:hover .traffic-bar-tooltip {
+      opacity: 1;
+      transform: translateY(0);
+    }
 
     .kpi-value {
       font-size: 28px;
@@ -1048,34 +1106,44 @@
         </div>
 
         <div class="kpi-grid">
+          <!-- 1. Website Traffic & Visitors -->
           <div class="kpi-card blue">
             <div class="kpi-header">
-              <span class="kpi-title">Active Universities</span>
+              <span class="kpi-title">Website Traffic & Visits</span>
               <div class="kpi-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
               </div>
             </div>
-            <div class="kpi-value" id="kpi-unis-count">-</div>
+            <div class="kpi-value" id="kpi-total-visits">-</div>
             <div class="kpi-subtext">
-              <span class="badge-pill-inline" id="kpi-unis-used">0 Visited</span>
-              <span id="kpi-unis-pending">0 Pending Review</span>
+              <span class="badge-pill-inline" id="kpi-today-visits" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-weight: 700;">+0 today</span>
+              <span id="kpi-unique-visitors">0 Unique People</span>
             </div>
           </div>
 
-          <div class="kpi-card purple">
+          <!-- 2. Platform Breakdown -->
+          <div class="kpi-card indigo">
             <div class="kpi-header">
-              <span class="kpi-title">Contest Teams</span>
+              <span class="kpi-title">Visitor Platforms</span>
               <div class="kpi-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
               </div>
             </div>
-            <div class="kpi-value" id="kpi-teams-count">-</div>
-            <div class="kpi-subtext">
-              <span class="badge-pill-inline" id="kpi-total-users-sub">0 Users</span>
-              <span>Active in Studio</span>
+            <div class="kpi-value" id="kpi-device-ratio" style="font-size: 22px; display: flex; align-items: baseline; gap: 8px;">
+              <span id="kpi-desktop-pct">-%</span>
+              <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Desktop</span>
+            </div>
+            <div class="device-progress-track">
+              <div class="device-progress-bar-desktop" id="kpi-desktop-bar" style="width: 50%;"></div>
+              <div class="device-progress-bar-mobile" id="kpi-mobile-bar" style="width: 50%;"></div>
+            </div>
+            <div class="kpi-subtext" style="justify-content: space-between; margin-top: 2px;">
+              <span id="kpi-desktop-count" style="font-size: 11px; font-weight: 600; color: #0071E3;">0 Desktop</span>
+              <span id="kpi-mobile-count" style="font-size: 11px; font-weight: 600; color: #8B5CF6;">0 Mobile</span>
             </div>
           </div>
 
+          <!-- 3. PDFs Exported -->
           <div class="kpi-card emerald">
             <div class="kpi-header">
               <span class="kpi-title">PDFs Exported</span>
@@ -1090,6 +1158,37 @@
             </div>
           </div>
 
+          <!-- 4. Contest Teams -->
+          <div class="kpi-card purple">
+            <div class="kpi-header">
+              <span class="kpi-title">Contest Teams</span>
+              <div class="kpi-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value" id="kpi-teams-count">-</div>
+            <div class="kpi-subtext">
+              <span class="badge-pill-inline" id="kpi-total-users-sub">0 Users</span>
+              <span>Active in Studio</span>
+            </div>
+          </div>
+
+          <!-- 5. Active Universities -->
+          <div class="kpi-card cyan">
+            <div class="kpi-header">
+              <span class="kpi-title">Active Universities</span>
+              <div class="kpi-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value" id="kpi-unis-count">-</div>
+            <div class="kpi-subtext">
+              <span class="badge-pill-inline" id="kpi-unis-used">0 Visited</span>
+              <span id="kpi-unis-pending">0 Pending Review</span>
+            </div>
+          </div>
+
+          <!-- 6. Algorithmic Content -->
           <div class="kpi-card amber">
             <div class="kpi-header">
               <span class="kpi-title">Algorithmic Content</span>
@@ -1102,6 +1201,38 @@
               <span class="badge-pill-inline" id="kpi-code-count">0 Code</span>
               <span id="kpi-notes-count">0 Notes</span>
             </div>
+          </div>
+        </div>
+
+        <!-- 7-Day Traffic & Activity Bar Chart Panel -->
+        <div class="dashboard-panel" style="margin-bottom: 24px;">
+          <div class="panel-header" style="margin-bottom: 16px;">
+            <div class="panel-title-group">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <h2 class="panel-title">Website Traffic & Visitor Activity (Last 7 Days)</h2>
+                <span class="status-badge" style="font-size: 10px; padding: 2px 8px;"><span class="pulse-dot"></span> Live Internal Analytics</span>
+              </div>
+              <span class="panel-subtitle">Daily human pageviews & unique visitors (excluding web crawlers, bots & rapid refreshes)</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); font-weight: 500;">
+                <span style="width: 10px; height: 10px; border-radius: 3px; background: #0071E3; display: inline-block;"></span>
+                <span>Pageviews</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); font-weight: 500;">
+                <span style="width: 10px; height: 10px; border-radius: 3px; background: #10B981; display: inline-block;"></span>
+                <span>Unique People</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chart Bars Container -->
+          <div id="traffic-bars-container" style="display: flex; align-items: flex-end; justify-content: space-between; height: 185px; padding: 16px 14px 0 14px; border-bottom: 1px solid var(--border-subtle); gap: 12px; background: #FAFBFD; border-radius: var(--radius-md) var(--radius-md) 0 0;">
+            <div style="width: 100%; text-align: center; color: var(--text-dim); padding: 50px 0;">Loading traffic trends...</div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px 4px 14px; font-size: 12px; color: var(--text-muted);">
+            <div>Today: <strong id="traffic-today-summary" style="color: var(--text-main); font-weight: 700;">0 visits</strong> (<span id="traffic-today-unique" style="font-weight: 600; color: #059669;">0 unique</span>)</div>
+            <div>7-Day Volume: <strong id="traffic-week-total" style="color: var(--text-main); font-weight: 700;">0 visits</strong></div>
           </div>
         </div>
 
@@ -1490,6 +1621,24 @@
       const data = await res.json();
       if (!data.ok) return;
 
+      // Traffic & Visitors KPIs
+      if (data.traffic) {
+        document.getElementById('kpi-total-visits').textContent = data.traffic.total_visits || 0;
+        document.getElementById('kpi-today-visits').textContent = `+${data.traffic.today_visits || 0} today`;
+        document.getElementById('kpi-unique-visitors').textContent = `${data.traffic.unique_visitors || 0} Unique People (${data.traffic.unique_visitors_today || 0} today)`;
+
+        document.getElementById('kpi-desktop-pct').textContent = `${data.traffic.desktop_pct || 0}%`;
+        const desktopBar = document.getElementById('kpi-desktop-bar');
+        const mobileBar = document.getElementById('kpi-mobile-bar');
+        if (desktopBar) desktopBar.style.width = `${data.traffic.desktop_pct || 0}%`;
+        if (mobileBar) mobileBar.style.width = `${data.traffic.mobile_pct || 0}%`;
+        document.getElementById('kpi-desktop-count').textContent = `${data.traffic.desktop_visits || 0} Desktop (${data.traffic.desktop_pct || 0}%)`;
+        document.getElementById('kpi-mobile-count').textContent = `${data.traffic.mobile_visits || 0} Mobile (${data.traffic.mobile_pct || 0}%)`;
+
+        // Render 7-day Bar Chart
+        renderTrafficChart(data.traffic.last_7_days || []);
+      }
+
       // Unis & Teams KPIs
       document.getElementById('kpi-unis-count').textContent = data.universities.total_institutions;
       document.getElementById('kpi-unis-used').textContent = `${data.universities.total_used} Visited`;
@@ -1556,6 +1705,59 @@
     } catch (e) {
       console.error(e);
     }
+  }
+
+  // Render 7-day Traffic Activity Bar Chart
+  function renderTrafficChart(days) {
+    const container = document.getElementById('traffic-bars-container');
+    if (!container) return;
+    if (!days || days.length === 0) {
+      container.innerHTML = '<div style="width: 100%; text-align: center; color: var(--text-dim); padding: 50px 0;">No traffic recorded yet.</div>';
+      return;
+    }
+
+    const maxVal = Math.max(...days.map(d => Math.max(d.visits, d.unique)), 1);
+    let weekTotal = 0;
+    let todayVisits = 0;
+    let todayUnique = 0;
+
+    container.innerHTML = days.map(d => {
+      weekTotal += (d.visits || 0);
+      if (d.is_today) {
+        todayVisits = d.visits || 0;
+        todayUnique = d.unique || 0;
+      }
+      const visitsHeight = Math.max(Math.round(((d.visits || 0) / maxVal) * 115), (d.visits > 0 ? 8 : 3));
+      const uniqueHeight = Math.max(Math.round(((d.unique || 0) / maxVal) * 115), (d.unique > 0 ? 8 : 3));
+
+      return `
+        <div class="traffic-bar-col">
+          <div class="traffic-bar-tooltip">
+            ${escapeHtml(d.date)}: <strong>${d.visits}</strong> visits (${d.unique} unique)
+          </div>
+          <div style="font-size: 11px; font-weight: 700; color: ${d.is_today ? '#0071E3' : 'var(--text-muted)'}; margin-bottom: 6px; font-family: var(--font-mono);">
+            ${d.visits}
+          </div>
+          <div style="display: flex; align-items: flex-end; gap: 4px; height: 118px;">
+            <div style="width: 16px; height: ${visitsHeight}px; background: ${d.is_today ? '#0071E3' : '#60A5FA'}; border-radius: 4px 4px 0 0; transition: height 0.3s ease; box-shadow: 0 1px 3px rgba(0, 113, 227, 0.2);" title="Pageviews: ${d.visits}"></div>
+            <div style="width: 16px; height: ${uniqueHeight}px; background: ${d.is_today ? '#10B981' : '#34D399'}; border-radius: 4px 4px 0 0; transition: height 0.3s ease; box-shadow: 0 1px 3px rgba(16, 185, 129, 0.2);" title="Unique People: ${d.unique}"></div>
+          </div>
+          <div style="margin-top: 8px; text-align: center;">
+            <div style="font-size: 11px; font-weight: ${d.is_today ? '700' : '600'}; color: ${d.is_today ? '#0071E3' : 'var(--text-main)'};">
+              ${escapeHtml(d.day)}${d.is_today ? ' <span style="font-size: 9px; padding: 1px 4px; background: rgba(0, 113, 227, 0.1); border-radius: 3px; font-weight: 700;">TODAY</span>' : ''}
+            </div>
+            <div style="font-size: 9.5px; color: var(--text-dim); margin-top: 1px;">${escapeHtml(d.date)}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const todaySummaryEl = document.getElementById('traffic-today-summary');
+    const todayUniqueEl = document.getElementById('traffic-today-unique');
+    const weekTotalEl = document.getElementById('traffic-week-total');
+    if (todaySummaryEl) todaySummaryEl.textContent = `${todayVisits} ${todayVisits === 1 ? 'visit' : 'visits'}`;
+    if (todayUniqueEl) todayUniqueEl.textContent = `${todayUnique} unique`;
+    if (weekTotalEl) weekTotalEl.textContent = `${weekTotal} ${weekTotal === 1 ? 'visit' : 'visits'}`;
   }
 
   // Load Institutions Directory
