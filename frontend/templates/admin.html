@@ -382,12 +382,46 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* KPI Grid */
+    /* KPI Grid - Balanced 4 Columns */
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 18px;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 1200px) {
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 640px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Traffic Intelligence Hub Grid */
+    .traffic-hub-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+      margin-bottom: 24px;
+      align-items: stretch;
+    }
+    @media (max-width: 1100px) {
+      .traffic-hub-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .traffic-hub-side {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .traffic-hub-side .kpi-card {
+      margin-bottom: 0;
+      flex: 1;
+      justify-content: center;
     }
     .kpi-card {
       background: var(--bg-surface);
@@ -1105,45 +1139,9 @@
           <button class="btn-table-action" onclick="switchTab('tab-institutions'); filterInstitutions('pending');">Review Now</button>
         </div>
 
+        <!-- ROW 1: 4 Core Platform Metrics (Perfect 4-Column Balanced Grid) -->
         <div class="kpi-grid">
-          <!-- 1. Website Traffic & Visitors -->
-          <div class="kpi-card blue">
-            <div class="kpi-header">
-              <span class="kpi-title">Website Traffic & Visits</span>
-              <div class="kpi-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-              </div>
-            </div>
-            <div class="kpi-value" id="kpi-total-visits">-</div>
-            <div class="kpi-subtext">
-              <span class="badge-pill-inline" id="kpi-today-visits" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-weight: 700;">+0 today</span>
-              <span id="kpi-unique-visitors">0 Unique People</span>
-            </div>
-          </div>
-
-          <!-- 2. Platform Breakdown -->
-          <div class="kpi-card indigo">
-            <div class="kpi-header">
-              <span class="kpi-title">Visitor Platforms</span>
-              <div class="kpi-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-              </div>
-            </div>
-            <div class="kpi-value" id="kpi-device-ratio" style="font-size: 22px; display: flex; align-items: baseline; gap: 8px;">
-              <span id="kpi-desktop-pct">-%</span>
-              <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Desktop</span>
-            </div>
-            <div class="device-progress-track">
-              <div class="device-progress-bar-desktop" id="kpi-desktop-bar" style="width: 50%;"></div>
-              <div class="device-progress-bar-mobile" id="kpi-mobile-bar" style="width: 50%;"></div>
-            </div>
-            <div class="kpi-subtext" style="justify-content: space-between; margin-top: 2px;">
-              <span id="kpi-desktop-count" style="font-size: 11px; font-weight: 600; color: #0071E3;">0 Desktop</span>
-              <span id="kpi-mobile-count" style="font-size: 11px; font-weight: 600; color: #8B5CF6;">0 Mobile</span>
-            </div>
-          </div>
-
-          <!-- 3. PDFs Exported -->
+          <!-- 1. PDFs Exported -->
           <div class="kpi-card emerald">
             <div class="kpi-header">
               <span class="kpi-title">PDFs Exported</span>
@@ -1158,7 +1156,7 @@
             </div>
           </div>
 
-          <!-- 4. Contest Teams -->
+          <!-- 2. Contest Teams -->
           <div class="kpi-card purple">
             <div class="kpi-header">
               <span class="kpi-title">Contest Teams</span>
@@ -1173,7 +1171,7 @@
             </div>
           </div>
 
-          <!-- 5. Active Universities -->
+          <!-- 3. Active Universities -->
           <div class="kpi-card cyan">
             <div class="kpi-header">
               <span class="kpi-title">Active Universities</span>
@@ -1188,7 +1186,7 @@
             </div>
           </div>
 
-          <!-- 6. Algorithmic Content -->
+          <!-- 4. Algorithmic Content -->
           <div class="kpi-card amber">
             <div class="kpi-header">
               <span class="kpi-title">Algorithmic Content</span>
@@ -1204,35 +1202,78 @@
           </div>
         </div>
 
-        <!-- 7-Day Traffic & Activity Bar Chart Panel -->
-        <div class="dashboard-panel" style="margin-bottom: 24px;">
-          <div class="panel-header" style="margin-bottom: 16px;">
-            <div class="panel-title-group">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <h2 class="panel-title">Website Traffic & Visitor Activity (Last 7 Days)</h2>
-                <span class="status-badge" style="font-size: 10px; padding: 2px 8px;"><span class="pulse-dot"></span> Live Internal Analytics</span>
+        <!-- ROW 2: Traffic & Audience Intelligence Hub (Chart + 2 Live Metric Cards) -->
+        <div class="traffic-hub-grid">
+          <!-- Left: 7-Day Traffic & Activity Bar Chart Panel -->
+          <div class="dashboard-panel" style="margin-bottom: 0; display: flex; flex-direction: column;">
+            <div class="panel-header" style="margin-bottom: 16px;">
+              <div class="panel-title-group">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <h2 class="panel-title">Website Traffic & Visitor Activity (Last 7 Days)</h2>
+                  <span class="status-badge" style="font-size: 10px; padding: 2px 8px;"><span class="pulse-dot"></span> Live Internal Analytics</span>
+                </div>
+                <span class="panel-subtitle">Daily human pageviews & unique visitors (excluding web crawlers, bots & rapid refreshes)</span>
               </div>
-              <span class="panel-subtitle">Daily human pageviews & unique visitors (excluding web crawlers, bots & rapid refreshes)</span>
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); font-weight: 500;">
+                  <span style="width: 10px; height: 10px; border-radius: 3px; background: #0071E3; display: inline-block;"></span>
+                  <span>Pageviews</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); font-weight: 500;">
+                  <span style="width: 10px; height: 10px; border-radius: 3px; background: #10B981; display: inline-block;"></span>
+                  <span>Unique People</span>
+                </div>
+              </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 16px;">
-              <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); font-weight: 500;">
-                <span style="width: 10px; height: 10px; border-radius: 3px; background: #0071E3; display: inline-block;"></span>
-                <span>Pageviews</span>
-              </div>
-              <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); font-weight: 500;">
-                <span style="width: 10px; height: 10px; border-radius: 3px; background: #10B981; display: inline-block;"></span>
-                <span>Unique People</span>
-              </div>
+
+            <!-- Chart Bars Container -->
+            <div id="traffic-bars-container" style="display: flex; align-items: flex-end; justify-content: space-between; height: 195px; padding: 16px 14px 0 14px; border-bottom: 1px solid var(--border-subtle); gap: 12px; background: #FAFBFD; border-radius: var(--radius-md) var(--radius-md) 0 0; flex: 1;">
+              <div style="width: 100%; text-align: center; color: var(--text-dim); padding: 50px 0;">Loading traffic trends...</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px 4px 14px; font-size: 12px; color: var(--text-muted);">
+              <div>Today: <strong id="traffic-today-summary" style="color: var(--text-main); font-weight: 700;">0 visits</strong> (<span id="traffic-today-unique" style="font-weight: 600; color: #059669;">0 unique</span>)</div>
+              <div>7-Day Volume: <strong id="traffic-week-total" style="color: var(--text-main); font-weight: 700;">0 visits</strong></div>
             </div>
           </div>
 
-          <!-- Chart Bars Container -->
-          <div id="traffic-bars-container" style="display: flex; align-items: flex-end; justify-content: space-between; height: 185px; padding: 16px 14px 0 14px; border-bottom: 1px solid var(--border-subtle); gap: 12px; background: #FAFBFD; border-radius: var(--radius-md) var(--radius-md) 0 0;">
-            <div style="width: 100%; text-align: center; color: var(--text-dim); padding: 50px 0;">Loading traffic trends...</div>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px 4px 14px; font-size: 12px; color: var(--text-muted);">
-            <div>Today: <strong id="traffic-today-summary" style="color: var(--text-main); font-weight: 700;">0 visits</strong> (<span id="traffic-today-unique" style="font-weight: 600; color: #059669;">0 unique</span>)</div>
-            <div>7-Day Volume: <strong id="traffic-week-total" style="color: var(--text-main); font-weight: 700;">0 visits</strong></div>
+          <!-- Right: Traffic & Platforms Cards Stack -->
+          <div class="traffic-hub-side">
+            <!-- 1. Website Traffic & Visits -->
+            <div class="kpi-card blue">
+              <div class="kpi-header">
+                <span class="kpi-title">Website Traffic & Visits</span>
+                <div class="kpi-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-total-visits">-</div>
+              <div class="kpi-subtext">
+                <span class="badge-pill-inline" id="kpi-today-visits" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-weight: 700;">+0 today</span>
+                <span id="kpi-unique-visitors">0 Unique People</span>
+              </div>
+            </div>
+
+            <!-- 2. Visitor Platforms -->
+            <div class="kpi-card indigo">
+              <div class="kpi-header">
+                <span class="kpi-title">Visitor Platforms</span>
+                <div class="kpi-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-device-ratio" style="font-size: 22px; display: flex; align-items: baseline; gap: 8px;">
+                <span id="kpi-desktop-pct">-%</span>
+                <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Desktop</span>
+              </div>
+              <div class="device-progress-track">
+                <div class="device-progress-bar-desktop" id="kpi-desktop-bar" style="width: 50%;"></div>
+                <div class="device-progress-bar-mobile" id="kpi-mobile-bar" style="width: 50%;"></div>
+              </div>
+              <div class="kpi-subtext" style="justify-content: space-between; margin-top: 2px;">
+                <span id="kpi-desktop-count" style="font-size: 11px; font-weight: 600; color: #0071E3;">0 Desktop</span>
+                <span id="kpi-mobile-count" style="font-size: 11px; font-weight: 600; color: #8B5CF6;">0 Mobile</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1693,11 +1734,16 @@
       if (data.teams.recent_teams && data.teams.recent_teams.length > 0) {
         recentTeamsContainer.innerHTML = data.teams.recent_teams.map(t => `
           <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 8px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="width: 8px; height: 8px; border-radius: 50%; background: #0071E3;"></span>
-              <span style="font-weight: 600; font-size: 13px; color: var(--text-main);">${escapeHtml(t.team_name)}</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: #0071E3; flex-shrink: 0;"></span>
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-weight: 600; font-size: 13px; color: var(--text-main);">${escapeHtml(t.team_name)}</span>
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: 500;">${escapeHtml(t.institution_name || 'Independent')}</span>
+              </div>
             </div>
-            <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">${escapeHtml(t.institution_name || 'Independent')}</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              ${t.build_count ? `<span class="badge-pill-inline" style="background: rgba(16, 185, 129, 0.1); color: #059669; font-size: 11px; font-weight: 700;">${t.build_count} ${t.build_count === 1 ? 'Build' : 'Builds'}</span>` : ''}
+            </div>
           </div>
         `).join('');
       } else {

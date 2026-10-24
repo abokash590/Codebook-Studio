@@ -1376,9 +1376,10 @@ def api_admin_stats():
     total_teams_count = teams_count_row[0] if teams_count_row else 0
 
     recent_teams = [dict(r) for r in conn.execute("""
-        SELECT DISTINCT team_name, institution_name, created_at
+        SELECT team_name, institution_name, MAX(created_at) as created_at, COUNT(*) as build_count
         FROM build_logs
         WHERE team_name != ''
+        GROUP BY team_name, institution_name
         ORDER BY created_at DESC
         LIMIT 6
     """).fetchall()]
