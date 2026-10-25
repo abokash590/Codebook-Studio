@@ -3806,13 +3806,13 @@ function updateNavBuildExport(state, stepText, pct) {
     btn.classList.remove("is-building");
     btn.classList.add("is-success");
     if (track) track.style.width = "100%";
-    if (text) text.textContent = stepText || "PDF Ready! Downloading...";
+    if (text) text.textContent = stepText || "Saved to Device!";
     setTimeout(() => {
       btn.classList.remove("is-success");
       if (track) track.style.width = "0%";
-      if (text) text.textContent = "Download PDF";
+      if (text) text.textContent = "Save / Print PDF";
       btn.disabled = false;
-    }, 2800);
+    }, 3200);
   } else if (state === "error") {
     btn.classList.remove("is-building");
     btn.classList.add("is-error");
@@ -3821,13 +3821,13 @@ function updateNavBuildExport(state, stepText, pct) {
     setTimeout(() => {
       btn.classList.remove("is-error");
       if (track) track.style.width = "0%";
-      if (text) text.textContent = "Download PDF";
+      if (text) text.textContent = "Save / Print PDF";
       btn.disabled = false;
     }, 3000);
   } else {
     btn.classList.remove("is-building", "is-success", "is-error");
     if (track) track.style.width = "0%";
-    if (text) text.textContent = "Download PDF";
+    if (text) text.textContent = "Save / Print PDF";
     btn.disabled = false;
   }
 }
@@ -3924,7 +3924,7 @@ function setPrintEnabled(enabled) {
   }
 }
 
-function onPrintPdf() {
+function onPrintPdf(triggerReview = true) {
   const currentBookTitle = (state.settings && state.settings.book_title && state.settings.book_title.trim()) || "Contest Codebook";
   const safeTitle = currentBookTitle.replace(/[\\/*?:"<>|]+/g, "").trim() || "codebook";
   const a = document.createElement("a");
@@ -3934,6 +3934,9 @@ function onPrintPdf() {
   a.click();
   document.body.removeChild(a);
   setStatus("Saved to local storage (Downloads).", "success");
+  if (triggerReview && window.ReviewManager) {
+    window.ReviewManager.onDirectDownload();
+  }
 }
 
 async function buildPdf() {
@@ -3972,6 +3975,9 @@ async function buildPdf() {
     const originalDocTitle = document.title;
     const currentBookTitle = (state.settings && state.settings.book_title && state.settings.book_title.trim()) || "Contest Codebook";
     document.title = currentBookTitle;
+    if (window.ReviewManager) {
+      window.ReviewManager.preparePrintTrigger();
+    }
     window.print();
     setStatus(`Export ready — ${count} page${count !== 1 ? "s" : ""}. Choose 'Save as PDF' in the print dialog.`, "success");
     setTimeout(() => {
@@ -5490,6 +5496,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   setActionHubState("idle");
   initCraftHero();
+  if (typeof ReviewManager !== "undefined") {
+    ReviewManager.init();
+  }
   if ($("nav-toggle-sidebar-btn")) $("nav-toggle-sidebar-btn").addEventListener("click", toggleSidebar);
   if ($("nav-toggle-rail-btn")) $("nav-toggle-rail-btn").addEventListener("click", toggleThumbnailsRail);
   if ($("sidebar-toggle-btn")) $("sidebar-toggle-btn").addEventListener("click", toggleSidebar);
@@ -5780,4 +5789,372 @@ function initCraftHero() {
     });
   }
 }
+
+// ==========================================================================
+// REVIEW & FEEDBACK SYSTEM CONTROLLER
+// ==========================================================================
+
+const ReviewManager = {
+  STORAGE_KEY: "cb_review_data",
+  currentRating: 0,
+  selectedTags: new Set(),
+  printTriggerArmed: false,
+  printStartTime: 0,
+
+  getState() {
+    try {
+      return JSON.parse(localStorage.getItem(this.STORAGE_KEY)) || {};
+    } catch (_) {
+      return {};
+    }
+  },
+
+  saveState(updates) {
+    const current = this.getState();
+    const next = { ...current, ...updates };
+    try {
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(next));
+    } catch (_) {}
+  },
+
+  shouldAutoPrompt() {
+    // If developer mode or admin, do not auto-prompt review modal
+    if (state && (state.is_dev_or_admin || (state.auth && state.auth.user && state.auth.user.role === "admin"))) {
+      return false;
+    }
+    const s = this.getState();
+    if (s.completed) return false; // Already submitted a review
+    if (s.snoozeUntil && Date.now() < s.snoozeUntil) return false; // Snoozed
+    return true;
+  },
+
+  snooze(days = 7) {
+    const snoozeUntil = Date.now() + days * 24 * 60 * 60 * 1000;
+    this.saveState({ snoozeUntil });
+  },
+
+  markCompleted() {
+    this.saveState({ completed: true, completedAt: Date.now() });
+  },
+
+  init() {
+    this.bindEvents();
+    this.listenToPrintEvents();
+  },
+
+  preparePrintTrigger() {
+    this.printTriggerArmed = true;
+    this.printStartTime = Date.now();
+  },
+
+  listenToPrintEvents() {
+    window.addEventListener("beforeprint", () => {
+      this.printStartTime = Date.now();
+      this.printTriggerArmed = true;
+    });
+
+    window.addEventListener("afterprint", () => {
+      if (!this.printTriggerArmed) return;
+      this.printTriggerArmed = false;
+
+      const duration = Date.now() - (this.printStartTime || 0);
+
+      // Only single print-to-PDF is used; no duplicate HTTP download.
+      // If user kept the print dialog open for >= 1000ms (configured and saved PDF to device):
+      if (duration >= 1000) {
+        updateNavBuildExport("success", "Saved to Device!", 100);
+        setStatus("PDF saved to your device.", "success");
+
+        if (this.shouldAutoPrompt()) {
+          setTimeout(() => {
+            this.open("print");
+          }, 1200);
+        }
+      } else {
+        // Quick cancel (< 1000ms) - restore button immediately
+        updateNavBuildExport("idle", "Save / Print PDF", 0);
+      }
+    });
+  },
+
+  onDirectDownload() {
+    if (this.shouldAutoPrompt()) {
+      setTimeout(() => {
+        this.open("download");
+      }, 3200);
+    }
+  },
+
+  open(source = "manual") {
+    const backdrop = $("review-modal-backdrop");
+    if (!backdrop) return;
+
+    this.resetForm();
+
+    const badgeText = $("review-badge-text");
+    const titleEl = $("review-widget-title");
+    const descEl = $("review-widget-desc");
+    const guestGroup = $("review-guest-name-group");
+
+    if (source === "print" || source === "download") {
+      if (badgeText) badgeText.textContent = "PDF Ready";
+      if (titleEl) titleEl.textContent = "How did your PDF turn out?";
+      if (descEl) descEl.textContent = "Help us refine layout density and typography for upcoming contests.";
+    } else {
+      if (badgeText) badgeText.textContent = "Feedback";
+      if (titleEl) titleEl.textContent = "Enjoying Codebook Studio?";
+      if (descEl) descEl.textContent = "Share your rating and thoughts with the community.";
+    }
+
+    // If user is already authenticated, hide the guest name input
+    const isLoggedIn = state && state.auth && state.auth.is_logged_in;
+    if (guestGroup) {
+      guestGroup.style.display = isLoggedIn ? "none" : "block";
+    }
+
+    backdrop.classList.remove("is-closing");
+    backdrop.style.display = "flex";
+  },
+
+  close(snoozeDays = 7) {
+    const backdrop = $("review-modal-backdrop");
+    if (!backdrop) return;
+
+    if (snoozeDays > 0) {
+      this.snooze(snoozeDays);
+    }
+
+    backdrop.classList.add("is-closing");
+    setTimeout(() => {
+      backdrop.style.display = "none";
+      backdrop.classList.remove("is-closing");
+    }, 220);
+  },
+
+  resetForm() {
+    this.currentRating = 0;
+    this.selectedTags.clear();
+
+    const starBtns = document.querySelectorAll(".review-star-btn");
+    starBtns.forEach(b => {
+      b.classList.remove("is-active", "is-hovered");
+    });
+
+    const hint = $("review-rating-hint");
+    if (hint) {
+      hint.textContent = "Click a star to rate";
+      hint.classList.remove("is-highlighted");
+    }
+
+    const form = $("review-expandable-form");
+    if (form) form.style.display = "none";
+
+    const guestInput = $("review-guest-name");
+    if (guestInput) guestInput.value = "";
+
+    const textarea = $("review-textarea");
+    if (textarea) textarea.value = "";
+
+    const tagPills = document.querySelectorAll(".review-tag-pill");
+    tagPills.forEach(p => p.classList.remove("active"));
+
+    const bodyView = $("review-widget-body");
+    const successView = $("review-widget-success");
+    if (bodyView) bodyView.style.display = "block";
+    if (successView) successView.style.display = "none";
+
+    const submitBtn = $("review-submit-btn");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = "<span>Send Feedback</span>";
+    }
+  },
+
+  setRating(rating) {
+    this.currentRating = rating;
+    const starBtns = document.querySelectorAll(".review-star-btn");
+    starBtns.forEach(btn => {
+      const val = parseInt(btn.dataset.rating, 10);
+      btn.classList.toggle("is-active", val <= rating);
+      btn.classList.remove("is-hovered");
+    });
+
+    const hints = {
+      1: "1 star — Needs improvement",
+      2: "2 stars — Fair",
+      3: "3 stars — Good",
+      4: "4 stars — Great experience",
+      5: "5 stars — Tournament Ready"
+    };
+
+    const hint = $("review-rating-hint");
+    if (hint) {
+      hint.textContent = hints[rating] || "";
+      hint.classList.add("is-highlighted");
+    }
+
+    // Expand detailed form smoothly
+    const form = $("review-expandable-form");
+    if (form && form.style.display === "none") {
+      form.style.display = "block";
+    }
+
+    // Contextualize placeholder (no emojis)
+    const textarea = $("review-textarea");
+    if (textarea) {
+      if (rating >= 4) {
+        textarea.placeholder = "What worked best for you? (optional)";
+      } else {
+        textarea.placeholder = "What was missing or what can we fix for your contest? (optional)";
+      }
+    }
+  },
+
+  bindEvents() {
+    // Star buttons hover & click
+    const starBtns = document.querySelectorAll(".review-star-btn");
+    starBtns.forEach(btn => {
+      const val = parseInt(btn.dataset.rating, 10);
+
+      btn.addEventListener("mouseenter", () => {
+        starBtns.forEach(b => {
+          const bVal = parseInt(b.dataset.rating, 10);
+          b.classList.toggle("is-hovered", bVal <= val);
+        });
+      });
+
+      btn.addEventListener("click", () => {
+        this.setRating(val);
+      });
+    });
+
+    const starsRow = $("review-stars-row");
+    if (starsRow) {
+      starsRow.addEventListener("mouseleave", () => {
+        starBtns.forEach(b => {
+          b.classList.remove("is-hovered");
+          const bVal = parseInt(b.dataset.rating, 10);
+          b.classList.toggle("is-active", bVal <= this.currentRating);
+        });
+      });
+    }
+
+    // Tag pills
+    const tagPills = document.querySelectorAll(".review-tag-pill");
+    tagPills.forEach(pill => {
+      pill.addEventListener("click", () => {
+        const tag = pill.dataset.tag;
+        if (this.selectedTags.has(tag)) {
+          this.selectedTags.delete(tag);
+          pill.classList.remove("active");
+        } else {
+          this.selectedTags.add(tag);
+          pill.classList.add("active");
+        }
+      });
+    });
+
+    // Close and Later buttons
+    const closeBtn = $("review-close-btn");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => this.close(7));
+    }
+
+    const laterBtn = $("review-later-btn");
+    if (laterBtn) {
+      laterBtn.addEventListener("click", () => this.close(7));
+    }
+
+    // Click outside on backdrop to dismiss
+    const backdrop = $("review-modal-backdrop");
+    if (backdrop) {
+      backdrop.addEventListener("click", (e) => {
+        if (e.target === backdrop) {
+          this.close(7);
+        }
+      });
+    }
+
+    // Manual trigger from user menu
+    const userReviewTrigger = $("user-review-trigger-btn");
+    if (userReviewTrigger) {
+      userReviewTrigger.addEventListener("click", () => {
+        const userDropdown = $("nav-user-dropdown");
+        if (userDropdown) userDropdown.style.display = "none";
+        this.open("manual");
+      });
+    }
+
+    // Submit button
+    const submitBtn = $("review-submit-btn");
+    if (submitBtn) {
+      submitBtn.addEventListener("click", () => this.submitReview());
+    }
+  },
+
+  async submitReview() {
+    if (this.currentRating < 1) {
+      showToast("Please select a rating from 1 to 5 stars.", "warning");
+      return;
+    }
+
+    const submitBtn = $("review-submit-btn");
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Sending...";
+    }
+
+    const comment = ($("review-textarea") ? $("review-textarea").value : "").trim();
+    const guestName = ($("review-guest-name") ? $("review-guest-name").value : "").trim();
+    const isPublic = $("review-public-check") ? $("review-public-check").checked : true;
+    const instName = (state.settings && state.settings.institution_name) || "";
+    const teamName = (state.settings && state.settings.team_name) || "";
+
+    const payload = {
+      rating: this.currentRating,
+      comment: comment,
+      user_name: guestName,
+      tags: Array.from(this.selectedTags),
+      is_public: isPublic,
+      institution_name: instName,
+      team_name: teamName,
+    };
+
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (data && data.ok) {
+        this.markCompleted();
+        const bodyView = $("review-widget-body");
+        const successView = $("review-widget-success");
+        if (bodyView) bodyView.style.display = "none";
+        if (successView) successView.style.display = "block";
+
+        setTimeout(() => {
+          this.close(0);
+        }, 2200);
+      } else {
+        showToast(data.error || "Failed to submit review", "error");
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Send Feedback";
+        }
+      }
+    } catch (err) {
+      console.error("Submit review error:", err);
+      showToast("Could not send review right now.", "error");
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Send Feedback";
+      }
+    }
+  }
+};
+
+window.ReviewManager = ReviewManager;
 

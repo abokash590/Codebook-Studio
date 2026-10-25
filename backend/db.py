@@ -104,6 +104,24 @@ CREATE TABLE IF NOT EXISTS settings (
     value TEXT,
     PRIMARY KEY (user_id, key)
 );
+
+CREATE TABLE IF NOT EXISTS reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL DEFAULT 'guest',
+    user_name TEXT DEFAULT '',
+    user_email TEXT DEFAULT '',
+    institution_name TEXT DEFAULT '',
+    team_name TEXT DEFAULT '',
+    rating INTEGER NOT NULL,
+    comment TEXT DEFAULT '',
+    tags TEXT DEFAULT '[]',
+    is_public INTEGER NOT NULL DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'approved',
+    created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_reviews_rating ON reviews(rating);
+CREATE INDEX IF NOT EXISTS idx_reviews_status ON reviews(status);
+CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews(created_at);
 """
 
 DEFAULT_TOPICS = [
@@ -440,6 +458,27 @@ def _migrate(conn):
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_site_visits_created_at ON site_visits(created_at)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_site_visits_visitor_id ON site_visits(visitor_id)")
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS reviews (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL DEFAULT 'guest',
+            user_name TEXT DEFAULT '',
+            user_email TEXT DEFAULT '',
+            institution_name TEXT DEFAULT '',
+            team_name TEXT DEFAULT '',
+            rating INTEGER NOT NULL,
+            comment TEXT DEFAULT '',
+            tags TEXT DEFAULT '[]',
+            is_public INTEGER NOT NULL DEFAULT 1,
+            status TEXT NOT NULL DEFAULT 'approved',
+            created_at INTEGER NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_reviews_rating ON reviews(rating)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_reviews_status ON reviews(status)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews(created_at)")
+
     # Clean up any historic accidental partial-typed pending institutions (e.g. 'my', 'dh')
     try:
         conn.execute("DELETE FROM institutions WHERE status = 'pending' AND (length(name) < 6 OR name NOT LIKE '% %')")

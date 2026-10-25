@@ -7236,4 +7236,427 @@ pre.card-code, pre.boilerplate-code {
   background: rgba(255, 255, 255, 0.12);
 }
 
+/* ==========================================================================
+   CENTERED LIGHT THEME POST-SAVE REVIEW & FEEDBACK SYSTEM
+   ========================================================================== */
+
+.review-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.review-modal-backdrop.is-closing {
+  pointer-events: none;
+}
+
+@keyframes reviewBackdropFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes reviewBackdropFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.review-modal-card {
+  width: 460px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.20), 0 4px 12px rgba(15, 23, 42, 0.05);
+  padding: 24px 26px 22px;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #0F172A;
+  position: relative;
+  animation: reviewCardZoom 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.review-modal-backdrop.is-closing .review-modal-card {
+  animation: reviewCardZoomOut 0.18s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes reviewCardZoom {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes reviewCardZoomOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translateY(6px);
+  }
+}
+
+.review-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.review-badge-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  padding: 4px 11px;
+  border-radius: 999px;
+}
+
+.review-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #0284C7;
+}
+
+.review-badge-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.review-close-btn {
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.14s ease;
+}
+
+.review-close-btn:hover {
+  color: #0F172A;
+  background: #F1F5F9;
+}
+
+.review-widget-title {
+  font-size: 19px;
+  font-weight: 650;
+  color: #0F172A;
+  margin: 0 0 6px 0;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+
+.review-widget-desc {
+  font-size: 13px;
+  color: #64748B;
+  margin: 0 0 18px 0;
+  line-height: 1.45;
+}
+
+/* Stars Rating Area */
+.review-stars-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.review-stars-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+}
+
+.review-star-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s ease;
+}
+
+.review-star-btn:hover {
+  transform: scale(1.12);
+}
+
+.review-star-btn .star-icon {
+  width: 30px;
+  height: 30px;
+  stroke: #CBD5E1;
+  stroke-width: 1.7;
+  fill: #FFFFFF;
+  transition: fill 0.14s ease, stroke 0.14s ease;
+}
+
+.review-star-btn:hover .star-icon,
+.review-star-btn.is-active .star-icon,
+.review-star-btn.is-hovered .star-icon {
+  fill: #F59E0B;
+  stroke: #D97706;
+}
+
+.review-rating-hint {
+  font-size: 12px;
+  font-weight: 550;
+  color: #64748B;
+  text-align: center;
+  margin-top: 8px;
+  min-height: 18px;
+  transition: color 0.14s ease;
+}
+
+.review-rating-hint.is-highlighted {
+  color: #B45309;
+  font-weight: 600;
+}
+
+/* Expanded Form */
+.review-expandable-form {
+  margin-top: 10px;
+  border-top: 1px solid #F1F5F9;
+  padding-top: 16px;
+  animation: reviewFormFadeDown 0.22s ease-out forwards;
+}
+
+@keyframes reviewFormFadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.review-tags-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.review-tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.review-tag-pill {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  user-select: none;
+}
+
+.review-tag-pill:hover {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+
+.review-tag-pill.active {
+  background: #0071E3;
+  border-color: #0071E3;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.review-field-group {
+  margin-bottom: 14px;
+}
+
+.review-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.review-optional-tag {
+  font-weight: 400;
+  color: #94A3B8;
+  font-size: 11px;
+}
+
+.review-text-input,
+.review-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 9px;
+  color: #0F172A;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.45;
+  outline: none;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.review-text-input:focus,
+.review-textarea:focus {
+  border-color: #0071E3;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.12);
+}
+
+.review-textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+
+.review-public-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+  margin-bottom: 18px;
+  user-select: none;
+}
+
+.review-public-toggle input[type="checkbox"] {
+  accent-color: #0071E3;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.review-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  padding-top: 4px;
+}
+
+.review-action-btn {
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 9px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  border: 1px solid transparent;
+}
+
+.review-action-btn.btn-secondary {
+  background: #F8FAFC;
+  color: #475569;
+  border-color: #E2E8F0;
+}
+
+.review-action-btn.btn-secondary:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+  border-color: #CBD5E1;
+}
+
+.review-action-btn.btn-primary {
+  background: #0071E3;
+  color: #FFFFFF;
+  border-color: #0071E3;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.review-action-btn.btn-primary:hover {
+  background: #0077ED;
+  border-color: #0077ED;
+}
+
+.review-action-btn.btn-primary:disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Success View */
+.review-widget-success {
+  text-align: center;
+  padding: 24px 12px 14px;
+  animation: reviewSuccessZoom 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes reviewSuccessZoom {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.review-success-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #DCFCE7;
+  border: 1px solid #BBF7D0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.review-success-title {
+  font-size: 17px;
+  font-weight: 650;
+  color: #0F172A;
+  margin: 0 0 6px 0;
+}
+
+.review-success-subtitle {
+  font-size: 13px;
+  color: #64748B;
+  margin: 0;
+  line-height: 1.45;
+}
+
+
+
 

@@ -184,10 +184,55 @@ def api_health():
     return jsonify({"status": "ok", "timestamp": int(time.time())})
 
 
+# ---------- Developer / Admin Traffic Filter ----------
+
+def is_developer_or_admin() -> bool:
+    """Detect if the current request is from the developer, admin, or localhost
+    to ensure personal usage does not manipulate analytics or traffic counts."""
+    try:
+        # 1. Dev mode cookie or query parameter
+        if request.cookies.get("cb_dev_mode") == "1" or request.args.get("dev_mode") == "1":
+            return True
+
+        # 2. Localhost or local loopback IP
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr or "")
+        if "," in ip:
+            ip = ip.split(",")[0].strip()
+        host = (request.host or "").lower()
+        if host.startswith("localhost") or host.startswith("127.0.0.1") or ip in ("127.0.0.1", "::1", "localhost"):
+            return True
+
+        # 3. Authenticated Admin account
+        uid = session.get("user_id")
+        if uid and uid != "guest":
+            conn = get_db()
+            row = conn.execute("SELECT role, email FROM users WHERE id = ?", (uid,)).fetchone()
+            conn.close()
+            if row:
+                if row["role"] == "admin":
+                    return True
+                admin_emails = (
+                    "ahmeds89thdoc1@gmail.com",
+                    "ahmeds89thdoc@gmail.com",
+                    "ahmeds89thdoc2@gmail.com",
+                    "ahmedsextraone@gmail.com",
+                    "admin@codebook.io",
+                )
+                if (row["email"] or "").lower() in admin_emails:
+                    return True
+    except Exception:
+        pass
+    return False
+
+
 # ---------- Visitor Traffic Logger ----------
 
 def log_site_visit(path: str = "/"):
-    """Tracks human visitors with 60-second debounce per visitor to avoid noise."""
+    """Tracks human visitors with 60-second debounce per visitor to avoid noise.
+    Automatically excludes developers and admins so data is never manipulated."""
+    if is_developer_or_admin():
+        return
+
     try:
         ua = (request.user_agent.string or "").lower()
         bot_keywords = ("bot", "spider", "crawler", "uptimerobot", "curl", "wget", "headless", "python-requests", "pingdom")
@@ -238,6 +283,10 @@ def index():
         import uuid
         vid = f"v_{uuid.uuid4().hex[:12]}"
         resp.set_cookie("cb_vid", vid, max_age=365 * 24 * 3600, samesite="Lax", httponly=True)
+    if request.args.get("dev_mode") == "1":
+        resp.set_cookie("cb_dev_mode", "1", max_age=365 * 24 * 3600, samesite="Lax", httponly=False)
+    elif request.args.get("dev_mode") == "0":
+        resp.delete_cookie("cb_dev_mode")
     return resp
 
 
@@ -627,6 +676,7 @@ def api_state():
     return jsonify({
         "topics": topics,
         "settings": settings,
+        "is_dev_or_admin": is_developer_or_admin(),
         "auth": {
             "is_logged_in": bool(user_info),
             "authenticated": bool(user_info),
@@ -1124,7 +1174,11 @@ def admin_required(f):
 
 @app.route("/api/track-export", methods=["POST"])
 def api_track_export():
-    """Track instantaneous PDF export events for university & team telemetry."""
+    """Track instantaneous PDF export events for university & team telemetry.
+    Automatically excludes developers and admins to keep metrics untainted."""
+    if is_developer_or_admin():
+        return jsonify({"ok": True, "dev_ignored": True})
+
     body = request.json or {}
     uid = get_active_user_id()
     user_name = "Guest Visitor"
@@ -1179,6 +1233,103 @@ def api_track_export():
     conn.commit()
     conn.close()
     return jsonify({"ok": True})
+
+
+# ---------------- REVIEWS & FEEDBACK API ----------------
+
+@app.route("/api/reviews", methods=["POST"])
+def api_submit_review():
+    """Submit a rating and optional feedback from the post-export review prompt or feedback button."""
+    data = request.get_json(silent=True) or {}
+    try:
+        rating = int(data.get("rating", 0))
+    except (ValueError, TypeError):
+        rating = 0
+
+    if not (1 <= rating <= 5):
+        return jsonify({"ok": False, "error": "Rating must be between 1 and 5"}), 400
+
+    comment = str(data.get("comment", "")).strip()[:1000]
+    tags = data.get("tags", [])
+    if isinstance(tags, list):
+        tags_json = json.dumps([str(t).strip()[:30] for t in tags[:10]])
+    else:
+        tags_json = "[]"
+    is_public = 1 if data.get("is_public", True) else 0
+
+    uid = get_active_user_id()
+    user_name = "Contestant"
+    user_email = ""
+
+    conn = get_db()
+    if uid != "guest":
+        u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
+        if u_row:
+            user_name = u_row["name"] or "Contestant"
+            user_email = u_row["email"] or ""
+
+    if uid == "guest" and data.get("user_name"):
+        user_name = str(data.get("user_name")).strip()[:60]
+
+    inst_name = str(data.get("institution_name", "")).strip()
+    team_name = str(data.get("team_name", "")).strip()
+
+    if not inst_name:
+        inst_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'institution_name'", (uid,)).fetchone()
+        if inst_row and inst_row["value"]:
+            inst_name = inst_row["value"].strip()
+
+    if not team_name:
+        team_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'team_name'", (uid,)).fetchone()
+        if team_row and team_row["value"]:
+            team_name = team_row["value"].strip()
+
+    now = int(time.time())
+    conn.execute(
+        """INSERT INTO reviews
+           (user_id, user_name, user_email, institution_name, team_name, rating, comment, tags, is_public, status, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?)""",
+        (uid, user_name, user_email, inst_name, team_name, rating, comment, tags_json, is_public, now),
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True, "message": "Thank you for your review! Best of luck in your contests!"})
+
+
+@app.route("/api/reviews", methods=["GET"])
+def api_get_reviews():
+    """Public showcase endpoint for testimonials and community reviews."""
+    limit = min(50, max(1, int(request.args.get("limit", 20))))
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT id, user_name, institution_name, team_name, rating, comment, tags, created_at
+        FROM reviews
+        WHERE status = 'approved' AND is_public = 1 AND rating >= 4
+        ORDER BY created_at DESC
+        LIMIT ?
+    """, (limit,)).fetchall()
+    conn.close()
+    reviews = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d["tags"] = json.loads(d.get("tags") or "[]")
+        except Exception:
+            d["tags"] = []
+        reviews.append(d)
+    return jsonify({"reviews": reviews})
+
+
+@app.route("/api/reviews/status", methods=["GET"])
+def api_get_review_status():
+    """Check if the currently signed-in user has already submitted a review."""
+    uid = get_active_user_id()
+    if uid == "guest":
+        return jsonify({"has_reviewed": False})
+    conn = get_db()
+    row = conn.execute("SELECT COUNT(*) FROM reviews WHERE user_id = ?", (uid,)).fetchone()
+    conn.close()
+    return jsonify({"has_reviewed": (row[0] > 0) if row else False})
 
 
 _pdf_build_lock = threading.Semaphore(1)
@@ -1423,6 +1574,17 @@ def api_admin_stats():
             "is_today": i == 0
         })
 
+    # Reviews & Feedback metrics
+    try:
+        total_reviews = conn.execute("SELECT COUNT(*) FROM reviews").fetchone()[0]
+        avg_rating_row = conn.execute("SELECT AVG(rating) FROM reviews").fetchone()[0]
+        avg_rating = round(avg_rating_row, 1) if avg_rating_row else 0
+        pending_reviews = conn.execute("SELECT COUNT(*) FROM reviews WHERE status = 'pending'").fetchone()[0]
+    except Exception:
+        total_reviews = 0
+        avg_rating = 0
+        pending_reviews = 0
+
     conn.close()
 
     return jsonify({
@@ -1437,6 +1599,11 @@ def api_admin_stats():
             "desktop_pct": desktop_pct,
             "mobile_pct": mobile_pct,
             "last_7_days": traffic_7_days,
+        },
+        "reviews": {
+            "total": total_reviews,
+            "avg_rating": avg_rating,
+            "pending": pending_reviews,
         },
         "users": {
             "total": total_users,
@@ -1474,6 +1641,48 @@ def api_admin_stats():
             "output_formatted": format_bytes(output_size),
         },
     })
+
+
+@app.route("/api/admin/reviews")
+@admin_required
+def api_admin_reviews():
+    """Fetch recent user reviews and ratings for admin moderation."""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT id, user_id, user_name, user_email, institution_name, team_name,
+               rating, comment, tags, is_public, status, created_at
+        FROM reviews
+        ORDER BY created_at DESC
+        LIMIT 100
+    """).fetchall()
+    reviews = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d["tags"] = json.loads(d.get("tags") or "[]")
+        except Exception:
+            d["tags"] = []
+        reviews.append(d)
+    conn.close()
+    return jsonify({"ok": True, "reviews": reviews})
+
+
+@app.route("/api/admin/reviews/<int:review_id>/status", methods=["POST"])
+@admin_required
+def api_admin_review_status(review_id):
+    """Update review status (approved, hidden, deleted)."""
+    data = request.json or {}
+    new_status = data.get("status")
+    if new_status not in ("approved", "hidden", "deleted"):
+        return jsonify({"ok": False, "error": "Invalid status"}), 400
+    conn = get_db()
+    if new_status == "deleted":
+        conn.execute("DELETE FROM reviews WHERE id = ?", (review_id,))
+    else:
+        conn.execute("UPDATE reviews SET status = ? WHERE id = ?", (new_status, review_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
 
 
 @app.route("/api/admin/users")
