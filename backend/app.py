@@ -1670,16 +1670,21 @@ def api_admin_reviews():
 @app.route("/api/admin/reviews/<int:review_id>/status", methods=["POST"])
 @admin_required
 def api_admin_review_status(review_id):
-    """Update review status (approved, hidden, deleted)."""
+    """Update review status (approved, hidden, deleted) or public showcase toggle."""
     data = request.json or {}
-    new_status = data.get("status")
-    if new_status not in ("approved", "hidden", "deleted"):
-        return jsonify({"ok": False, "error": "Invalid status"}), 400
     conn = get_db()
-    if new_status == "deleted":
-        conn.execute("DELETE FROM reviews WHERE id = ?", (review_id,))
-    else:
-        conn.execute("UPDATE reviews SET status = ? WHERE id = ?", (new_status, review_id))
+    if "is_public" in data:
+        is_pub = 1 if data["is_public"] else 0
+        conn.execute("UPDATE reviews SET is_public = ? WHERE id = ?", (is_pub, review_id))
+    if "status" in data:
+        new_status = data["status"]
+        if new_status not in ("approved", "hidden", "deleted"):
+            conn.close()
+            return jsonify({"ok": False, "error": "Invalid status"}), 400
+        if new_status == "deleted":
+            conn.execute("DELETE FROM reviews WHERE id = ?", (review_id,))
+        else:
+            conn.execute("UPDATE reviews SET status = ? WHERE id = ?", (new_status, review_id))
     conn.commit()
     conn.close()
     return jsonify({"ok": True})

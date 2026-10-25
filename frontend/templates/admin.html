@@ -545,6 +545,34 @@
       color: var(--text-muted);
       border: 1px solid var(--border-subtle);
     }
+    .review-stars-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      color: #F59E0B;
+    }
+    .review-tag-badge {
+      display: inline-block;
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      margin: 1px 2px;
+    }
+    .badge-showcase-public {
+      background: rgba(16, 185, 129, 0.1) !important;
+      color: #059669 !important;
+      border: 1px solid rgba(16, 185, 129, 0.25) !important;
+      font-weight: 700 !important;
+    }
+    .badge-showcase-hidden {
+      background: var(--bg-surface-elevated) !important;
+      color: var(--text-dim) !important;
+      border: 1px solid var(--border-subtle) !important;
+    }
 
     /* Cards / Surfaces */
     .dashboard-panel {
@@ -1069,6 +1097,11 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Users
       </a>
+      <a class="nav-item" data-tab="tab-reviews">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Reviews & Ratings
+        <span class="nav-badge-pending" id="nav-reviews-pending-badge" style="display: none; background: #F59E0B; color: #FFFFFF;">0</span>
+      </a>
       <a class="nav-item" data-tab="tab-starter">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         Starter Pack
@@ -1306,6 +1339,25 @@
             </div>
           </div>
         </div>
+
+        <!-- Contestant Reviews & Feedback Overview Panel -->
+        <div class="dashboard-panel" style="margin-top: 20px;">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <h2 class="panel-title">Contestant Reviews & Community Feedback</h2>
+                <span class="status-badge" style="font-size: 11px; padding: 2px 8px; background: rgba(245, 158, 11, 0.1); color: #D97706; border-color: rgba(245, 158, 11, 0.25);">
+                  ★ <span id="overview-avg-rating">0.0</span> / 5.0 Average (<span id="overview-total-reviews">0</span> reviews)
+                </span>
+              </div>
+              <span class="panel-subtitle">Latest ratings and feedback submitted after exporting PDFs</span>
+            </div>
+            <button class="btn-table-action" onclick="switchTab('tab-reviews')">Manage Reviews Console</button>
+          </div>
+          <div id="overview-recent-reviews-list" style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="text-align: center; color: var(--text-dim); padding: 18px;">Loading reviews...</div>
+          </div>
+        </div>
       </section>
 
       <!-- 2. INSTITUTIONS & TEAMS TAB -->
@@ -1444,6 +1496,113 @@
               </thead>
               <tbody id="builds-table-body">
                 <tr><td colspan="7" style="text-align: center; color: var(--text-dim);">Loading logs...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- REVIEWS & COMMUNITY FEEDBACK TAB -->
+      <section id="tab-reviews" class="tab-pane">
+        <!-- 4 KPI Cards for Reviews -->
+        <div class="kpi-grid">
+          <div class="kpi-card amber">
+            <div class="kpi-header">
+              <span class="kpi-title">Average Rating</span>
+              <div class="kpi-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value" id="reviews-kpi-avg">0.0 ★</div>
+            <div class="kpi-subtext">
+              <span class="badge-pill-inline" id="reviews-kpi-5star-pct">0% 5-Star</span>
+              <span>Overall satisfaction</span>
+            </div>
+          </div>
+
+          <div class="kpi-card emerald">
+            <div class="kpi-header">
+              <span class="kpi-title">Total Reviews</span>
+              <div class="kpi-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value" id="reviews-kpi-total">0</div>
+            <div class="kpi-subtext">
+              <span class="badge-pill-inline" id="reviews-kpi-positive" style="background: rgba(16, 185, 129, 0.1); color: #059669;">0 Positive</span>
+              <span>(4 & 5 stars)</span>
+            </div>
+          </div>
+
+          <div class="kpi-card blue">
+            <div class="kpi-header">
+              <span class="kpi-title">Public Showcase</span>
+              <div class="kpi-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value" id="reviews-kpi-showcase">0</div>
+            <div class="kpi-subtext">
+              <span class="badge-pill-inline" style="background: rgba(0, 113, 227, 0.08); color: #0071E3;">Approved</span>
+              <span>Visible to community</span>
+            </div>
+          </div>
+
+          <div class="kpi-card purple">
+            <div class="kpi-header">
+              <span class="kpi-title">Feedback / Needs Work</span>
+              <div class="kpi-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value" id="reviews-kpi-critical">0</div>
+            <div class="kpi-subtext">
+              <span class="badge-pill-inline" style="background: rgba(239, 68, 68, 0.08); color: #DC2626;">≤ 3 Stars</span>
+              <span>Improvement areas</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reviews Management Panel -->
+        <div class="dashboard-panel">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <h2 class="panel-title">Reviews & Contestant Feedback Directory</h2>
+              <span class="panel-subtitle">Review feedback from teams, manage public showcase approvals, and track satisfaction</span>
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <div class="search-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="reviews-search" class="search-input" placeholder="Search by contestant, university, team, tag, or comment...">
+            </div>
+            <div class="filter-pills">
+              <button class="filter-pill active" data-rfilter="all" onclick="filterReviews('all')">All (<span id="rcount-all">0</span>)</button>
+              <button class="filter-pill" data-rfilter="5" onclick="filterReviews('5')">5 Stars ★★★★★ (<span id="rcount-5">0</span>)</button>
+              <button class="filter-pill" data-rfilter="4" onclick="filterReviews('4')">4 Stars ★★★★ (<span id="rcount-4">0</span>)</button>
+              <button class="filter-pill" data-rfilter="critical" onclick="filterReviews('critical')">1-3 Stars (<span id="rcount-critical">0</span>)</button>
+              <button class="filter-pill" data-rfilter="showcase" onclick="filterReviews('showcase')">Public Showcase (<span id="rcount-showcase">0</span>)</button>
+              <button class="filter-pill" data-rfilter="hidden" onclick="filterReviews('hidden')">Hidden (<span id="rcount-hidden">0</span>)</button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Reviewer</th>
+                  <th>University & Team</th>
+                  <th>Rating</th>
+                  <th>Tags</th>
+                  <th>Comment / Feedback</th>
+                  <th>Showcase</th>
+                  <th>Date</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="reviews-table-body">
+                <tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 30px;">Loading reviews...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1636,6 +1795,7 @@
       'tab-overview': 'Dashboard Overview',
       'tab-institutions': 'University & Team Directory',
       'tab-users': 'Registered Programmers & Roles',
+      'tab-reviews': 'Reviews & Contestant Feedback',
       'tab-starter': 'Official Starter Library',
       'tab-builds': 'PDF Build Diagnostics',
       'tab-maintenance': 'System Utilities & Backup'
@@ -1645,6 +1805,7 @@
     if (tabId === 'tab-overview') loadStats();
     if (tabId === 'tab-institutions') loadInstitutions();
     if (tabId === 'tab-users') loadUsers();
+    if (tabId === 'tab-reviews') loadReviews();
     if (tabId === 'tab-starter') loadStarterPack();
     if (tabId === 'tab-builds') loadBuildLogs();
   }
@@ -1709,6 +1870,25 @@
         pendingBanner.style.display = 'none';
         navBadge.style.display = 'none';
       }
+
+      // Reviews metrics in overview & nav badge
+      if (data.reviews) {
+        const avgEl = document.getElementById('overview-avg-rating');
+        const totalEl = document.getElementById('overview-total-reviews');
+        if (avgEl) avgEl.textContent = (data.reviews.avg_rating && data.reviews.avg_rating > 0) ? Number(data.reviews.avg_rating).toFixed(1) : '0.0';
+        if (totalEl) totalEl.textContent = data.reviews.total || 0;
+
+        const revBadge = document.getElementById('nav-reviews-pending-badge');
+        if (revBadge) {
+          if (data.reviews.total > 0) {
+            revBadge.style.display = 'inline-block';
+            revBadge.textContent = data.reviews.total;
+          } else {
+            revBadge.style.display = 'none';
+          }
+        }
+      }
+      loadOverviewRecentReviews();
 
       // Top Unis List
       const topUnisContainer = document.getElementById('overview-top-unis-list');
@@ -2126,6 +2306,25 @@
       } catch (e) {
         showToast('Error deleting institution', 'error');
       }
+    } else if (pendingDeleteType === 'review') {
+      try {
+        const res = await fetch(`/api/admin/reviews/${pendingDeleteId}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'deleted' })
+        });
+        const data = await res.json();
+        document.getElementById('confirm-modal').classList.remove('active');
+        if (data.ok) {
+          showToast('Review permanently deleted');
+          await loadReviews();
+          await loadStats();
+        } else {
+          showToast(data.error || 'Failed to delete review', 'error');
+        }
+      } catch (e) {
+        showToast('Error deleting review', 'error');
+      }
     }
     pendingDeleteType = null;
     pendingDeleteId = null;
@@ -2349,13 +2548,282 @@
     }
   };
 
+  // ---------------- REVIEW MANAGEMENT CONTROLLER ----------------
+  let cachedReviews = [];
+  let reviewFilter = 'all';
+
+  async function loadOverviewRecentReviews() {
+    const container = document.getElementById('overview-recent-reviews-list');
+    if (!container) return;
+    try {
+      const res = await fetch('/api/admin/reviews');
+      const data = await res.json();
+      if (!data.ok || !data.reviews || data.reviews.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; color: var(--text-dim); padding: 24px 14px; background: var(--bg-surface-elevated); border: 1px dashed var(--border-subtle); border-radius: 8px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="1.8" style="margin-bottom: 6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <div style="font-size: 13px; font-weight: 600; color: var(--text-muted);">No reviews submitted yet</div>
+            <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 2px;">When contestants export their codebook and rate the studio, feedback will appear here.</div>
+          </div>
+        `;
+        return;
+      }
+
+      const recent = data.reviews.slice(0, 5);
+      container.innerHTML = recent.map(r => `
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; padding: 12px 14px; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 8px; gap: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-weight: 700; font-size: 13px; color: var(--text-main);">${escapeHtml(r.user_name || 'Guest Contestant')}</span>
+              ${r.institution_name ? `<span class="badge-pill-inline" style="background: rgba(0, 113, 227, 0.08); color: #0071E3;">${escapeHtml(r.institution_name)}</span>` : ''}
+              ${r.team_name ? `<span class="badge-pill-inline">${escapeHtml(r.team_name)}</span>` : ''}
+              <span style="font-size: 11px; color: var(--text-dim);">${formatDate(r.created_at)}</span>
+            </div>
+            ${r.comment ? `<div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.45; margin-top: 2px;">"${escapeHtml(r.comment)}"</div>` : '<div style="font-size: 11.5px; color: var(--text-dim); font-style: italic;">No written comments provided.</div>'}
+            ${(r.tags && r.tags.length) ? `
+              <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;">
+                ${r.tags.map(t => `<span class="review-tag-badge">${escapeHtml(t)}</span>`).join('')}
+              </div>
+            ` : ''}
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
+            <div class="review-stars-inline">${renderStars(r.rating)}</div>
+            ${r.is_public ? '<span class="badge-pill-inline badge-showcase-public" style="font-size: 10px;">Public Showcase</span>' : '<span class="badge-pill-inline badge-showcase-hidden" style="font-size: 10px;">Private</span>'}
+          </div>
+        </div>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+      container.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 14px;">Failed to load reviews.</div>';
+    }
+  }
+
+  async function loadReviews() {
+    const tbody = document.getElementById('reviews-table-body');
+    if (!tbody) return;
+    try {
+      const res = await fetch('/api/admin/reviews');
+      const data = await res.json();
+      if (!data.ok) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim);">Failed to load reviews</td></tr>';
+        return;
+      }
+
+      cachedReviews = data.reviews || [];
+      updateReviewMetrics(cachedReviews);
+      renderReviewsTable();
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim);">Error loading reviews</td></tr>';
+    }
+  }
+
+  function updateReviewMetrics(reviews) {
+    const total = reviews.length;
+    let sum = 0;
+    let fiveStars = 0;
+    let positive = 0;
+    let showcase = 0;
+    let critical = 0;
+
+    reviews.forEach(r => {
+      sum += r.rating;
+      if (r.rating === 5) fiveStars++;
+      if (r.rating >= 4) positive++;
+      if (r.rating <= 3) critical++;
+      if (r.is_public && r.status === 'approved') showcase++;
+    });
+
+    const avg = total > 0 ? (sum / total).toFixed(1) : '0.0';
+    const fiveStarPct = total > 0 ? Math.round((fiveStars / total) * 100) : 0;
+
+    const avgEl = document.getElementById('reviews-kpi-avg');
+    if (avgEl) avgEl.textContent = `${avg} ★`;
+    const fspEl = document.getElementById('reviews-kpi-5star-pct');
+    if (fspEl) fspEl.textContent = `${fiveStarPct}% 5-Star`;
+
+    const totalEl = document.getElementById('reviews-kpi-total');
+    if (totalEl) totalEl.textContent = total;
+    const posEl = document.getElementById('reviews-kpi-positive');
+    if (posEl) posEl.textContent = `${positive} Positive`;
+
+    const showEl = document.getElementById('reviews-kpi-showcase');
+    if (showEl) showEl.textContent = showcase;
+
+    const critEl = document.getElementById('reviews-kpi-critical');
+    if (critEl) critEl.textContent = critical;
+
+    // Filter pill counts
+    if (document.getElementById('rcount-all')) document.getElementById('rcount-all').textContent = total;
+    if (document.getElementById('rcount-5')) document.getElementById('rcount-5').textContent = fiveStars;
+    if (document.getElementById('rcount-4')) document.getElementById('rcount-4').textContent = reviews.filter(r => r.rating === 4).length;
+    if (document.getElementById('rcount-critical')) document.getElementById('rcount-critical').textContent = critical;
+    if (document.getElementById('rcount-showcase')) document.getElementById('rcount-showcase').textContent = showcase;
+    if (document.getElementById('rcount-hidden')) document.getElementById('rcount-hidden').textContent = reviews.filter(r => r.status === 'hidden' || !r.is_public).length;
+  }
+
+  function filterReviews(filterType) {
+    reviewFilter = filterType;
+    document.querySelectorAll('#tab-reviews .filter-pill').forEach(b => {
+      b.classList.toggle('active', b.dataset.rfilter === filterType);
+    });
+    renderReviewsTable();
+  }
+
+  function renderStars(rating) {
+    let stars = '';
+    for (let i = 1; i <= 5; i++) {
+      const fill = i <= rating ? '#F59E0B' : '#E2E8F0';
+      stars += `<svg width="13" height="13" viewBox="0 0 24 24" fill="${fill}" stroke="${fill}"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+    }
+    return stars;
+  }
+
+  function renderReviewsTable() {
+    const tbody = document.getElementById('reviews-table-body');
+    if (!tbody) return;
+
+    const searchInput = document.getElementById('reviews-search');
+    const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+
+    let list = cachedReviews.filter(r => {
+      // Filter tab
+      if (reviewFilter === '5' && r.rating !== 5) return false;
+      if (reviewFilter === '4' && r.rating !== 4) return false;
+      if (reviewFilter === 'critical' && r.rating > 3) return false;
+      if (reviewFilter === 'showcase' && (!r.is_public || r.status !== 'approved')) return false;
+      if (reviewFilter === 'hidden' && (r.status !== 'hidden' && r.is_public)) return false;
+
+      // Search query
+      if (query) {
+        const str = `${r.user_name || ''} ${r.user_email || ''} ${r.institution_name || ''} ${r.team_name || ''} ${r.comment || ''} ${(r.tags || []).join(' ')}`.toLowerCase();
+        if (!str.includes(query)) return false;
+      }
+      return true;
+    });
+
+    if (list.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 36px 14px;">No reviews found matching the current filter.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = list.map(r => `
+      <tr>
+        <td>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-weight: 600; font-size: 13px; color: var(--text-main);">${escapeHtml(r.user_name || 'Guest Contestant')}</span>
+            ${r.user_email ? `<span style="font-size: 11px; color: var(--text-dim); font-family: var(--font-mono);">${escapeHtml(r.user_email)}</span>` : '<span style="font-size: 11px; color: var(--text-dim);">Guest User</span>'}
+          </div>
+        </td>
+        <td>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 12.5px; font-weight: 500; color: var(--text-main);">${escapeHtml(r.institution_name || 'Independent')}</span>
+            ${r.team_name ? `<span style="font-size: 11px; color: #0071E3; font-weight: 600;">${escapeHtml(r.team_name)}</span>` : ''}
+          </div>
+        </td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <div class="review-stars-inline">${renderStars(r.rating)}</div>
+            <span style="font-size: 12px; font-weight: 700; color: var(--text-main); margin-left: 2px;">${r.rating}.0</span>
+          </div>
+        </td>
+        <td>
+          ${(r.tags && r.tags.length) ? `
+            <div style="display: flex; flex-wrap: wrap; gap: 3px; max-width: 220px;">
+              ${r.tags.map(t => `<span class="review-tag-badge">${escapeHtml(t)}</span>`).join('')}
+            </div>
+          ` : '<span style="color: var(--text-dim); font-size: 11px;">-</span>'}
+        </td>
+        <td style="max-width: 320px;">
+          ${r.comment ? `
+            <div style="font-size: 12.5px; color: var(--text-main); line-height: 1.4; word-break: break-word;">
+              "${escapeHtml(r.comment)}"
+            </div>
+          ` : '<span style="color: var(--text-dim); font-size: 11px; font-style: italic;">No comments</span>'}
+        </td>
+        <td>
+          <button class="btn-table-action" onclick="toggleReviewShowcase(${r.id}, ${r.is_public ? 1 : 0})" title="Toggle public showcase visibility">
+            ${r.is_public ? '<span class="badge-pill-inline badge-showcase-public">✓ Showcase</span>' : '<span class="badge-pill-inline badge-showcase-hidden">Hidden</span>'}
+          </button>
+        </td>
+        <td>
+          <div style="display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--text-dim);">
+            <span>${formatDate(r.created_at)}</span>
+            <span>${formatTime(r.created_at)}</span>
+          </div>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; align-items: center; gap: 6px;">
+            <button class="btn-table-action" onclick="toggleReviewStatus(${r.id}, '${r.status === 'hidden' ? 'approved' : 'hidden'}')" title="${r.status === 'hidden' ? 'Unhide review' : 'Hide review'}">
+              ${r.status === 'hidden' ? 'Unhide' : 'Hide'}
+            </button>
+            <button class="btn-table-danger" onclick="confirmDeleteReview(${r.id}, '${escapeHtml(r.user_name || 'Contestant')}')" title="Permanently delete review">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function toggleReviewStatus(reviewId, newStatus) {
+    try {
+      const res = await fetch(`/api/admin/reviews/${reviewId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Review status updated to ${newStatus}`);
+        await loadReviews();
+        await loadStats();
+      } else {
+        showToast(data.error || 'Failed to update review status', 'error');
+      }
+    } catch (e) {
+      showToast('Error updating review status', 'error');
+    }
+  }
+
+  async function toggleReviewShowcase(reviewId, currentIsPublic) {
+    try {
+      const res = await fetch(`/api/admin/reviews/${reviewId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_public: currentIsPublic ? 0 : 1 })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(currentIsPublic ? 'Removed from public showcase' : 'Approved for public showcase');
+        await loadReviews();
+        await loadStats();
+      } else {
+        showToast(data.error || 'Failed to update showcase setting', 'error');
+      }
+    } catch (e) {
+      showToast('Error updating showcase setting', 'error');
+    }
+  }
+
+  function confirmDeleteReview(reviewId, authorName) {
+    pendingDeleteType = 'review';
+    pendingDeleteId = reviewId;
+    document.getElementById('modal-title').textContent = 'Delete Review';
+    document.getElementById('modal-text').textContent = `Are you sure you want to permanently delete the review from "${authorName}"? This action cannot be undone.`;
+    document.getElementById('confirm-modal').classList.add('active');
+  }
+
   // Search Listeners
   document.getElementById('users-search').addEventListener('input', renderUsersTable);
   document.getElementById('institutions-search').addEventListener('input', renderInstitutionsTable);
+  const revSearch = document.getElementById('reviews-search');
+  if (revSearch) revSearch.addEventListener('input', renderReviewsTable);
+
   document.getElementById('btn-refresh-data').addEventListener('click', async () => {
     await loadStats();
     await loadInstitutions();
     await loadUsers();
+    await loadReviews();
     await loadGistSyncStatus();
     showToast('Dashboard data refreshed');
   });
@@ -2380,6 +2848,7 @@
   window.addEventListener('DOMContentLoaded', () => {
     loadStats();
     loadInstitutions();
+    loadReviews();
     loadGistSyncStatus();
   });
 </script>
