@@ -1862,6 +1862,23 @@ def api_admin_codebooks():
     u_type = (request.args.get("type") or "all").strip().lower()
 
     conn = get_db()
+    # Auto-sync: Ensure any registered user with snippets has an active snapshot visible to admin
+    try:
+        missing_users = conn.execute("""
+            SELECT u.id, u.name, u.email
+            FROM users u
+            WHERE (SELECT COUNT(*) FROM snippets s WHERE s.user_id = u.id AND s.deleted_at IS NULL) > 0
+              AND (SELECT COUNT(*) FROM codebook_snapshots cs WHERE cs.user_id = u.id) = 0
+        """).fetchall()
+        for mu in missing_users:
+            inst_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'institution_name'", (mu["id"],)).fetchone()
+            team_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'team_name'", (mu["id"],)).fetchone()
+            inst_v = inst_row["value"].strip() if inst_row and inst_row["value"] else ""
+            team_v = team_row["value"].strip() if team_row and team_row["value"] else ""
+            save_codebook_snapshot(conn, mu["id"], mu["name"] or "", mu["email"] or "", inst_v, team_v, 0)
+    except Exception:
+        pass
+
     sql = """
         SELECT id, user_id, user_type, user_name, user_email, institution_name, team_name,
                book_title, page_count, created_at, created_at_iso
