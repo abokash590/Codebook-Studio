@@ -1316,25 +1316,37 @@ def _template_card_html(label: str, chunk_text: str, font_size: float, card_styl
         """
 
 
-def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = None, user_id: str = "guest", output_path: Path | None = None) -> Path:
-    """Renders the codebook PDF.
-
-    `layout`, when provided, is the exact page-by-page breakdown the browser
-    preview already computed (see computeBuildLayout() in app.js): which
-    snippet IDs land on which physical page, and how the boilerplate text is
-    split across pages. When present, this function renders one page per
-    chunk instead of handing WeasyPrint a long continuous flow to paginate
-    on its own -- that's what keeps the built PDF matching what was shown
-    on screen (previously these were two independent pagination decisions
-    that could disagree). If no layout is given (e.g. an older client, or a
-    direct API call), it falls back to letting WeasyPrint lay out each
-    topic as one continuous multi-column flow, same as before.
-    """
-    OUTPUT_DIR.mkdir(exist_ok=True)
+def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = None, user_id: str = "guest", output_path: Path | None = None, snapshot_content: dict | None = None) -> Path:
+    """Renders the codebook PDF. Supports rendering live user data or frozen snapshot content."""
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    if output_path is not None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
     pdf_path = output_path if output_path is not None else (OUTPUT_DIR / "codebook.pdf")
-    conn = get_db()
-    topics = conn.execute("SELECT * FROM topics WHERE user_id=? AND deleted_at IS NULL ORDER BY sort_order", (user_id,)).fetchall()
-    settings = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings WHERE user_id=?", (user_id,))}
+
+    if snapshot_content:
+        settings = dict(snapshot_content.get("settings") or {})
+        topics = snapshot_content.get("topics") or []
+        by_topic = {}
+        all_snippets = []
+        for t in topics:
+            t_id = t.get("id") or t["id"]
+            snips = t.get("snippets") or []
+            by_topic[t_id] = snips
+            all_snippets.extend(snips)
+        snippet_by_id = {s.get("id"): s for s in all_snippets}
+    else:
+        conn = get_db()
+        topics = conn.execute("SELECT * FROM topics WHERE user_id=? AND deleted_at IS NULL ORDER BY sort_order", (user_id,)).fetchall()
+        settings = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings WHERE user_id=?", (user_id,))}
+        all_snippets = conn.execute("SELECT * FROM snippets WHERE user_id=? AND deleted_at IS NULL", (user_id,)).fetchall()
+        snippet_by_id = {s["id"]: s for s in all_snippets}
+
+        by_topic = {}
+        for t in topics:
+            query = "SELECT * FROM snippets WHERE user_id=? AND topic_id=? AND deleted_at IS NULL ORDER BY sort_order"
+            by_topic[t["id"]] = conn.execute(query, (user_id, t["id"])).fetchall()
+        conn.close()
+
     team_name = settings.get("team_name") or ""
     institution_name = settings.get("institution_name") or ""
     book_title = settings.get("book_title") or "Contest Codebook"
@@ -1349,15 +1361,6 @@ def build_codebook_pdf(exclude_unverified: bool = False, layout: dict | None = N
     show_header = _show_header_val not in (0, "0", False, None, "")
     _show_boilerplate_val = settings.get("show_boilerplate", "1")
     show_boilerplate = _show_boilerplate_val not in (0, "0", False, None, "") and bool(boilerplate_code.strip())
-
-    all_snippets = conn.execute("SELECT * FROM snippets WHERE user_id=? AND deleted_at IS NULL", (user_id,)).fetchall()
-    snippet_by_id = {s["id"]: s for s in all_snippets}
-
-    by_topic = {}
-    for t in topics:
-        query = "SELECT * FROM snippets WHERE user_id=? AND topic_id=? AND deleted_at IS NULL ORDER BY sort_order"
-        by_topic[t["id"]] = conn.execute(query, (user_id, t["id"])).fetchall()
-    conn.close()
 
     card_width_mm = _card_inner_width_mm(page_size)
     boilerplate_width_mm = _boilerplate_inner_width_mm(page_size)

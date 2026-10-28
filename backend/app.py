@@ -1928,6 +1928,41 @@ def api_admin_codebook_detail(snapshot_id):
     return jsonify({"ok": True, "codebook": data})
 
 
+@app.route("/api/admin/codebooks/<snapshot_id>/preview-pdf")
+@admin_required
+def api_admin_codebook_preview_pdf(snapshot_id):
+    """Streams the exact A4 PDF directly inline in the browser or iframe for full A4 preview."""
+    conn = get_db()
+    row = conn.execute("SELECT * FROM codebook_snapshots WHERE id = ?", (snapshot_id,)).fetchone()
+    conn.close()
+    if not row:
+        return jsonify({"ok": False, "error": "Snapshot not found."}), 404
+
+    filename = f"{row['team_name'] or 'codebook'}_{snapshot_id[:8]}.pdf"
+    clean_filename = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', filename)
+
+    snap_pdf = OUTPUT_DIR / f"{snapshot_id}.pdf"
+    if not snap_pdf.exists():
+        user_pdf = OUTPUT_DIR / f"codebook_{row['user_id']}.pdf"
+        if user_pdf.exists():
+            try:
+                shutil.copyfile(user_pdf, snap_pdf)
+            except Exception:
+                pass
+
+    if not snap_pdf.exists():
+        try:
+            content = json.loads(row["content_json"]) if row["content_json"] else {}
+            build_codebook_pdf(user_id=row["user_id"], output_path=snap_pdf, snapshot_content=content)
+        except Exception as e:
+            return jsonify({"ok": False, "error": f"Failed to generate A4 PDF preview: {str(e)}"}), 500
+
+    resp = make_response(send_file(snap_pdf, as_attachment=False, mimetype="application/pdf"))
+    resp.headers["Content-Disposition"] = f'inline; filename="{clean_filename}"'
+    resp.headers["X-Frame-Options"] = "SAMEORIGIN"
+    return resp
+
+
 @app.route("/api/admin/codebooks/<snapshot_id>/export-pdf")
 @admin_required
 def api_admin_codebook_export_pdf(snapshot_id):
@@ -1942,14 +1977,24 @@ def api_admin_codebook_export_pdf(snapshot_id):
     clean_filename = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', filename)
 
     snap_pdf = OUTPUT_DIR / f"{snapshot_id}.pdf"
+    if not snap_pdf.exists():
+        user_pdf = OUTPUT_DIR / f"codebook_{row['user_id']}.pdf"
+        if user_pdf.exists():
+            try:
+                shutil.copyfile(user_pdf, snap_pdf)
+            except Exception:
+                pass
+        else:
+            try:
+                content = json.loads(row["content_json"]) if row["content_json"] else {}
+                build_codebook_pdf(user_id=row["user_id"], output_path=snap_pdf, snapshot_content=content)
+            except Exception:
+                pass
+
     if snap_pdf.exists():
         return send_file(snap_pdf, as_attachment=True, download_name=clean_filename, mimetype="application/pdf")
 
-    user_pdf = OUTPUT_DIR / f"codebook_{row['user_id']}.pdf"
-    if user_pdf.exists():
-        return send_file(user_pdf, as_attachment=True, download_name=clean_filename, mimetype="application/pdf")
-
-    return jsonify({"ok": False, "error": "PDF file for this snapshot has expired or was cleared."}), 404
+    return jsonify({"ok": False, "error": "PDF file for this snapshot could not be generated."}), 500
 
 
 @app.route("/api/admin/codebooks/<snapshot_id>/delete", methods=["POST"])
