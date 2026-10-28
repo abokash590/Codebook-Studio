@@ -7657,6 +7657,63 @@ pre.card-code, pre.boilerplate-code {
   line-height: 1.45;
 }
 
+/* ---------- STUDIO GUEST NOTICE CARD (Style Panel Top) ---------- */
+.studio-guest-card {
+  gap: 9px !important;
+  background: #FFFFFF !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.studio-guest-card .studio-card-head {
+  margin-bottom: 0;
+}
+
+.studio-guest-desc {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #6E6E73;
+  margin: 0;
+}
+
+.studio-guest-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 33px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: #111110;
+  border: 1px solid #111110;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  transition: all 0.15s ease;
+  user-select: none;
+  box-sizing: border-box;
+  margin-top: 3px;
+}
+
+.studio-guest-btn:hover {
+  background: #27272A;
+  border-color: #27272A;
+  transform: translateY(-0.5px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.14);
+}
+
+.studio-guest-btn:active {
+  transform: translateY(0);
+}
+
+.studio-guest-btn svg {
+  flex-shrink: 0;
+}
+
+
 
 
 

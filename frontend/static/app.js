@@ -234,6 +234,7 @@ function renderAuthNav(authData) {
   const ddEmail = $("user-dropdown-email");
   const adminLink = $("user-admin-link");
   const adminDivider = $("user-admin-divider");
+  const guestBanner = $("guest-signin-banner");
 
   const isLoggedIn = Boolean(authData && (authData.authenticated || authData.is_logged_in) && authData.user);
 
@@ -279,6 +280,7 @@ function renderAuthNav(authData) {
     }
     const nudge = $("nav-cloud-nudge");
     if (nudge) nudge.style.display = "none";
+    if (guestBanner) guestBanner.style.display = "none";
   } else {
     if (authGroup) authGroup.style.display = "inline-flex";
     if (loginBtn) loginBtn.style.display = "inline-flex";
@@ -287,6 +289,7 @@ function renderAuthNav(authData) {
     if (userDropdown) userDropdown.style.display = "none";
     if (adminLink) adminLink.style.display = "none";
     if (adminDivider) adminDivider.style.display = "none";
+    if (guestBanner) guestBanner.style.display = "flex";
 
     const nudge = $("nav-cloud-nudge");
     if (nudge) {
@@ -493,6 +496,14 @@ function initAuth() {
 
   const logoutBtn = $("user-logout-btn");
   if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
+
+  const guestBannerBtn = $("guest-banner-signin-btn");
+  if (guestBannerBtn) {
+    guestBannerBtn.addEventListener("click", (e) => {
+      if (e) e.preventDefault();
+      openAuthModal("login");
+    });
+  }
 
   const closeBtn = $("auth-close-btn");
   if (closeBtn) {

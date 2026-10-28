@@ -667,9 +667,11 @@ def api_state():
                 "SELECT * FROM snippets WHERE user_id=? AND topic_id=? AND deleted_at IS NULL ORDER BY sort_order", (uid, t["id"])
             )
         ]
-    settings = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings WHERE user_id=?", (uid,))}
+    from backend.db import DEFAULT_SETTINGS, DEFAULT_BOILERPLATE_CODE
+    db_settings = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings WHERE user_id=?", (uid,))}
+    settings = dict(DEFAULT_SETTINGS)
+    settings.update(db_settings)
     if not settings.get("boilerplate_code"):
-        from backend.db import DEFAULT_BOILERPLATE_CODE
         settings["boilerplate_code"] = DEFAULT_BOILERPLATE_CODE
     conn.close()
     user_token = generate_auth_token(user_info["id"]) if user_info else ""
@@ -1332,6 +1334,89 @@ def api_get_review_status():
     return jsonify({"has_reviewed": (row[0] > 0) if row else False})
 
 
+def save_codebook_snapshot(conn, user_id: str, user_name: str = "", user_email: str = "", inst_name: str = "", team_name: str = "", page_count: int = 0) -> str:
+    """Creates an immutable frozen snapshot of a user's or team's codebook.
+    Preserves multiple versions even if team_name and institution_name match an existing one."""
+    from datetime import datetime
+    import shutil
+    import uuid
+
+    settings_rows = conn.execute("SELECT key, value FROM settings WHERE user_id = ?", (user_id,)).fetchall()
+    from backend.db import DEFAULT_SETTINGS
+    settings = dict(DEFAULT_SETTINGS)
+    settings.update({r["key"]: r["value"] for r in settings_rows})
+
+    final_inst = inst_name.strip() if inst_name else (settings.get("institution_name") or "")
+    final_team = team_name.strip() if team_name else (settings.get("team_name") or "")
+    book_title = settings.get("book_title") or "Contest Codebook"
+
+    topics_rows = conn.execute(
+        "SELECT * FROM topics WHERE user_id = ? AND deleted_at IS NULL ORDER BY sort_order", (user_id,)
+    ).fetchall()
+    topics = []
+    for t_row in topics_rows:
+        t_dict = dict(t_row)
+        snippets_rows = conn.execute(
+            "SELECT * FROM snippets WHERE user_id = ? AND topic_id = ? AND deleted_at IS NULL ORDER BY sort_order",
+            (user_id, t_dict["id"])
+        ).fetchall()
+        t_dict["snippets"] = [snippet_row_to_dict(s) for s in snippets_rows]
+        topics.append(t_dict)
+
+    snapshot_data = {
+        "settings": settings,
+        "topics": topics,
+    }
+    content_json = json.dumps(snapshot_data, ensure_ascii=False)
+
+    snapshot_id = f"snap_{uuid.uuid4().hex[:12]}"
+    now_epoch = int(time.time())
+    now_iso = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    user_type = "registered" if (user_id != "guest" and not user_id.startswith("guest_")) else "guest"
+    display_user_name = user_name or ("Guest (" + (final_team or "Anonymous") + ")")
+
+    conn.execute(
+        """INSERT INTO codebook_snapshots
+           (id, user_id, user_type, user_name, user_email, institution_name, team_name, book_title, page_count, created_at, created_at_iso, content_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (snapshot_id, user_id, user_type, display_user_name, user_email or "", final_inst, final_team, book_title, page_count, now_epoch, now_iso, content_json),
+    )
+    conn.commit()
+
+    user_pdf_path = OUTPUT_DIR / f"codebook_{user_id}.pdf"
+    if user_pdf_path.exists():
+        try:
+            shutil.copyfile(user_pdf_path, OUTPUT_DIR / f"{snapshot_id}.pdf")
+        except Exception:
+            pass
+
+    return snapshot_id
+
+
+@app.route("/api/snapshots/save", methods=["POST"])
+def api_save_snapshot():
+    uid = get_active_user_id()
+    conn = get_db()
+    user_name = "Guest"
+    user_email = ""
+    if uid != "guest":
+        u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
+        if u_row:
+            user_name = u_row["name"]
+            user_email = u_row["email"]
+
+    inst_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'institution_name'", (uid,)).fetchone()
+    team_row = conn.execute("SELECT value FROM settings WHERE user_id = ? AND key = 'team_name'", (uid,)).fetchone()
+    req_data = request.get_json(silent=True) or {}
+    inst_name = (req_data.get("institution_name") or "").strip() or (inst_row["value"].strip() if inst_row and inst_row["value"] else "")
+    team_name = (req_data.get("team_name") or "").strip() or (team_row["value"].strip() if team_row and team_row["value"] else "")
+    page_count = int(req_data.get("page_count", 0))
+
+    snap_id = save_codebook_snapshot(conn, uid, user_name, user_email, inst_name, team_name, page_count)
+    conn.close()
+    return jsonify({"ok": True, "snapshot_id": snap_id})
+
+
 _pdf_build_lock = threading.Semaphore(1)
 
 @app.route("/api/build", methods=["POST"])
@@ -1384,6 +1469,18 @@ def api_build():
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'success', '', ?)""",
                 (uid, user_name, user_email, inst_name, team_name, engine, page_count, duration_ms, int(time.time())),
             )
+
+            # Record immutable frozen snapshot (preserves all versions per team & university)
+            snap_id = save_codebook_snapshot(
+                conn,
+                user_id=uid,
+                user_name=user_name,
+                user_email=user_email,
+                inst_name=inst_name,
+                team_name=team_name,
+                page_count=page_count
+            )
+
             if inst_name:
                 clean_inst = re.sub(r'\s*\([^)]*\)', '', inst_name).strip()
                 conn.execute(
@@ -1400,6 +1497,7 @@ def api_build():
             return jsonify({
                 "ok": True,
                 "page_count": page_count,
+                "snapshot_id": snap_id,
                 "over_limit": page_count > 25,
                 "duration_ms": duration_ms,
             })
@@ -1585,10 +1683,18 @@ def api_admin_stats():
         avg_rating = 0
         pending_reviews = 0
 
+    try:
+        total_codebooks = conn.execute("SELECT COUNT(*) FROM codebook_snapshots").fetchone()[0]
+    except Exception:
+        total_codebooks = 0
+
     conn.close()
 
     return jsonify({
         "ok": True,
+        "codebooks": {
+            "total": total_codebooks,
+        },
         "traffic": {
             "total_visits": total_visits,
             "today_visits": today_visits,
@@ -1744,6 +1850,105 @@ def api_admin_delete_user(user_id):
     conn.commit()
     conn.close()
     return jsonify({"ok": True, "user_id": user_id})
+
+
+# ---------- ADMIN CODEBOOK SNAPSHOTS & INSPECTION ----------
+
+@app.route("/api/admin/codebooks")
+@admin_required
+def api_admin_codebooks():
+    """Returns all codebook snapshots for admin inspection, with filtering by search term or user type."""
+    q = (request.args.get("q") or "").strip().lower()
+    u_type = (request.args.get("type") or "all").strip().lower()
+
+    conn = get_db()
+    sql = """
+        SELECT id, user_id, user_type, user_name, user_email, institution_name, team_name,
+               book_title, page_count, created_at, created_at_iso
+        FROM codebook_snapshots
+        WHERE 1=1
+    """
+    params = []
+
+    if u_type in ("registered", "guest"):
+        sql += " AND user_type = ?"
+        params.append(u_type)
+
+    if q:
+        sql += """ AND (
+            LOWER(institution_name) LIKE ? OR
+            LOWER(team_name) LIKE ? OR
+            LOWER(user_name) LIKE ? OR
+            LOWER(user_email) LIKE ? OR
+            LOWER(book_title) LIKE ?
+        )"""
+        p = f"%{q}%"
+        params.extend([p, p, p, p, p])
+
+    sql += " ORDER BY created_at DESC LIMIT 200"
+    rows = conn.execute(sql, params).fetchall()
+    conn.close()
+
+    return jsonify({"ok": True, "codebooks": [dict(r) for r in rows]})
+
+
+@app.route("/api/admin/codebooks/<snapshot_id>")
+@admin_required
+def api_admin_codebook_detail(snapshot_id):
+    """Fetch full codebook details and content_json for deep admin inspection."""
+    conn = get_db()
+    row = conn.execute("SELECT * FROM codebook_snapshots WHERE id = ?", (snapshot_id,)).fetchone()
+    conn.close()
+    if not row:
+        return jsonify({"ok": False, "error": "Codebook snapshot not found."}), 404
+
+    data = dict(row)
+    try:
+        data["content"] = json.loads(data["content_json"])
+    except Exception:
+        data["content"] = {}
+
+    return jsonify({"ok": True, "codebook": data})
+
+
+@app.route("/api/admin/codebooks/<snapshot_id>/export-pdf")
+@admin_required
+def api_admin_codebook_export_pdf(snapshot_id):
+    """Download the pre-compiled or newly generated PDF for this exact snapshot."""
+    conn = get_db()
+    row = conn.execute("SELECT * FROM codebook_snapshots WHERE id = ?", (snapshot_id,)).fetchone()
+    conn.close()
+    if not row:
+        return jsonify({"ok": False, "error": "Snapshot not found."}), 404
+
+    filename = f"{row['team_name'] or 'codebook'}_{snapshot_id[:8]}.pdf"
+    clean_filename = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', filename)
+
+    snap_pdf = OUTPUT_DIR / f"{snapshot_id}.pdf"
+    if snap_pdf.exists():
+        return send_file(snap_pdf, as_attachment=True, download_name=clean_filename, mimetype="application/pdf")
+
+    user_pdf = OUTPUT_DIR / f"codebook_{row['user_id']}.pdf"
+    if user_pdf.exists():
+        return send_file(user_pdf, as_attachment=True, download_name=clean_filename, mimetype="application/pdf")
+
+    return jsonify({"ok": False, "error": "PDF file for this snapshot has expired or was cleared."}), 404
+
+
+@app.route("/api/admin/codebooks/<snapshot_id>/delete", methods=["POST"])
+@admin_required
+def api_admin_codebook_delete(snapshot_id):
+    conn = get_db()
+    conn.execute("DELETE FROM codebook_snapshots WHERE id = ?", (snapshot_id,))
+    conn.commit()
+    conn.close()
+    snap_pdf = OUTPUT_DIR / f"{snapshot_id}.pdf"
+    if snap_pdf.exists():
+        try:
+            snap_pdf.unlink()
+        except Exception:
+            pass
+    return jsonify({"ok": True})
 
 
 @app.route("/api/admin/build-logs")

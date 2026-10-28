@@ -122,6 +122,24 @@ CREATE TABLE IF NOT EXISTS reviews (
 CREATE INDEX IF NOT EXISTS idx_reviews_rating ON reviews(rating);
 CREATE INDEX IF NOT EXISTS idx_reviews_status ON reviews(status);
 CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews(created_at);
+
+CREATE TABLE IF NOT EXISTS codebook_snapshots (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL DEFAULT 'guest',
+    user_type TEXT NOT NULL DEFAULT 'guest',
+    user_name TEXT DEFAULT '',
+    user_email TEXT DEFAULT '',
+    institution_name TEXT DEFAULT '',
+    team_name TEXT DEFAULT '',
+    book_title TEXT DEFAULT 'Contest Codebook',
+    page_count INTEGER DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    created_at_iso TEXT NOT NULL,
+    content_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_snapshots_team ON codebook_snapshots(institution_name, team_name);
+CREATE INDEX IF NOT EXISTS idx_snapshots_user ON codebook_snapshots(user_id);
+CREATE INDEX IF NOT EXISTS idx_snapshots_created ON codebook_snapshots(created_at);
 """
 
 DEFAULT_TOPICS = [
@@ -478,6 +496,26 @@ def _migrate(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_reviews_rating ON reviews(rating)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_reviews_status ON reviews(status)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews(created_at)")
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS codebook_snapshots (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL DEFAULT 'guest',
+            user_type TEXT NOT NULL DEFAULT 'guest',
+            user_name TEXT DEFAULT '',
+            user_email TEXT DEFAULT '',
+            institution_name TEXT DEFAULT '',
+            team_name TEXT DEFAULT '',
+            book_title TEXT DEFAULT 'Contest Codebook',
+            page_count INTEGER DEFAULT 0,
+            created_at INTEGER NOT NULL,
+            created_at_iso TEXT NOT NULL,
+            content_json TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_team ON codebook_snapshots(institution_name, team_name)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_user ON codebook_snapshots(user_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_created ON codebook_snapshots(created_at)")
 
     # Clean up any historic accidental partial-typed pending institutions (e.g. 'my', 'dh')
     try:

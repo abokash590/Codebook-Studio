@@ -209,7 +209,31 @@
     <!-- TAB 1 CONTENT: STYLE (Design & Book Settings) -->
     <div class="sidebar-panel active" id="panel-style">
       <div class="studio-style-container" id="settings-module">
-        
+
+        <!-- Guest Notice: Cloud Backup (Visible until signed in) -->
+        <div class="studio-card studio-guest-card" id="guest-signin-banner">
+          <div class="studio-card-head">
+            <span class="studio-card-title">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px; vertical-align: -1px; opacity: 0.7;">
+                <path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-7.05-6M5 5a8 8 0 0 0-4 7h1.26a5 5 0 0 0 8.79 3.05"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+              <span>Cloud Backup</span>
+            </span>
+            <span class="studio-badge-subtle">Guest Session</span>
+          </div>
+          <div class="studio-guest-desc">
+            Don't lose your work—sign in to back up your codebook to the cloud.
+          </div>
+          <button type="button" class="studio-guest-btn" id="guest-banner-signin-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+            <span>Sign In to Save Codebook</span>
+          </button>
+        </div>
 
         <!-- Section 1: Book Identity -->
         <div class="studio-card">
@@ -246,7 +270,7 @@
               <span>Team Name</span>
             </label>
             <div class="studio-input-wrap">
-              <input type="text" id="team-name" class="studio-input" placeholder="Type your Team name">
+              <input type="text" id="team-name" class="studio-input" placeholder="Type your Team name" autocomplete="off">
             </div>
           </div>
         </div>
@@ -270,7 +294,7 @@
           <div class="studio-field">
             <label class="studio-label" for="code-theme">Code Theme</label>
             <select id="code-theme" class="studio-select">
-              <option value="nord">Nord</option>
+              <option value="nord" selected>Nord</option>
               <option value="github-light">GitHub Light</option>
               <option value="one-light">One Light</option>
               <option value="catppuccin">Catppuccin Latte</option>

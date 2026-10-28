@@ -1097,6 +1097,11 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Users
       </a>
+      <a class="nav-item" data-tab="tab-codebooks">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        Team Codebooks
+        <span class="nav-badge-pending" id="nav-codebooks-badge" style="display: none; background: #0071E3; color: #FFFFFF;">0</span>
+      </a>
       <a class="nav-item" data-tab="tab-reviews">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         Reviews & Ratings
@@ -1441,12 +1446,61 @@
                   <th>Institution & Team</th>
                   <th>Auth Provider</th>
                   <th>Snippets</th>
+                  <th>Joined</th>
                   <th>Role</th>
                   <th style="text-align: right;">Actions</th>
                 </tr>
               </thead>
               <tbody id="users-table-body">
-                <tr><td colspan="7" style="text-align: center; color: var(--text-dim);">Loading users...</td></tr>
+                <tr><td colspan="8" style="text-align: center; color: var(--text-dim);">Loading users...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3B. TEAM CODEBOOKS TAB -->
+      <section id="tab-codebooks" class="tab-pane">
+        <div class="dashboard-panel">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <h2 class="panel-title">Team Codebooks & Snapshots</h2>
+              <span class="panel-subtitle">Browse and inspect codebooks saved by universities and teams (both registered users and guest sessions)</span>
+            </div>
+            <div class="panel-actions">
+              <button class="btn-refresh" id="btn-refresh-codebooks" onclick="loadCodebooks()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          <div class="table-toolbar">
+            <div class="search-input-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="codebooks-search" class="search-input" placeholder="Search by University, Team, or Author..." oninput="renderCodebooksTable()">
+            </div>
+            <div class="filter-pills" id="codebooks-filter-pills">
+              <button class="filter-pill active" data-filter="all" onclick="filterCodebooks('all')">All Codebooks</button>
+              <button class="filter-pill" data-filter="registered" onclick="filterCodebooks('registered')">Registered</button>
+              <button class="filter-pill" data-filter="guest" onclick="filterCodebooks('guest')">Guest Sessions</button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Institution / University</th>
+                  <th>Team Name</th>
+                  <th>User / Author</th>
+                  <th>Pages</th>
+                  <th>Date & Time</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="codebooks-table-body">
+                <tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">Loading team codebooks...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1714,6 +1768,32 @@
   </main>
 </div>
 
+<!-- Modal: Codebook Deep Inspector -->
+<div class="modal-overlay" id="codebook-inspector-modal">
+  <div class="modal-card modal-card-lg" style="max-width: 860px; width: 95%; max-height: 88vh; display: flex; flex-direction: column; padding: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 14px;">
+      <div>
+        <h3 class="modal-title" id="inspector-modal-title" style="margin-bottom: 4px;">Team Codebook Inspector</h3>
+        <p class="modal-text" id="inspector-modal-sub" style="margin-bottom: 0; font-size: 13px;">Viewing snapshot details</p>
+      </div>
+      <button class="btn-action-ghost" onclick="closeCodebookInspector()" style="padding: 6px 10px; border-radius: 6px;">Close</button>
+    </div>
+    <div id="inspector-modal-body" style="overflow-y: auto; flex: 1; padding-right: 4px;">
+      <!-- Content dynamically injected -->
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 14px; margin-top: 14px;">
+      <span id="inspector-meta-info" style="font-size: 12px; color: var(--text-dim); font-family: var(--font-mono);"></span>
+      <div style="display: flex; gap: 8px;">
+        <a id="inspector-pdf-download-btn" class="btn-table-action" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; background: #0071E3; color: #FFFFFF;" href="#" target="_blank">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download PDF
+        </a>
+        <button class="btn-action-ghost" onclick="closeCodebookInspector()">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Confirm Delete User / Institution -->
 <div class="modal-overlay" id="confirm-modal">
   <div class="modal-card">
@@ -1795,6 +1875,7 @@
       'tab-overview': 'Dashboard Overview',
       'tab-institutions': 'University & Team Directory',
       'tab-users': 'Registered Programmers & Roles',
+      'tab-codebooks': 'Team Codebooks & Snapshots',
       'tab-reviews': 'Reviews & Contestant Feedback',
       'tab-starter': 'Official Starter Library',
       'tab-builds': 'PDF Build Diagnostics',
@@ -1805,6 +1886,7 @@
     if (tabId === 'tab-overview') loadStats();
     if (tabId === 'tab-institutions') loadInstitutions();
     if (tabId === 'tab-users') loadUsers();
+    if (tabId === 'tab-codebooks') loadCodebooks();
     if (tabId === 'tab-reviews') loadReviews();
     if (tabId === 'tab-starter') loadStarterPack();
     if (tabId === 'tab-builds') loadBuildLogs();
@@ -2223,9 +2305,13 @@
           </span>
         </td>
         <td style="font-family: var(--font-mono);">${u.snippet_count} <span style="color: var(--text-dim); font-size: 11px;">(${u.topic_count} topics)</span></td>
+        <td style="font-size: 12px; color: var(--text-dim); white-space: nowrap;">${formatDate(u.created_at)}</td>
         <td><span class="role-badge ${u.role}">${u.role}</span></td>
         <td style="text-align: right;">
           <div style="display: inline-flex; gap: 6px;">
+            <button class="btn-table-action" onclick="inspectUserCodebook('${u.id}', '${escapeHtml(u.name || u.email)}')">
+              Inspect Book
+            </button>
             <button class="btn-table-action" onclick="toggleRole('${u.id}', '${u.role}')">
               ${u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
             </button>
@@ -2839,6 +2925,217 @@
     }
   });
 
+  // ---------- TEAM CODEBOOKS & SNAPSHOTS ----------
+  let cachedCodebooks = [];
+  let codebooksFilter = 'all';
+
+  async function loadCodebooks() {
+    try {
+      const q = document.getElementById('codebooks-search') ? document.getElementById('codebooks-search').value.trim() : '';
+      const res = await fetch(`/api/admin/codebooks?type=${codebooksFilter}&q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (!data.ok) return;
+      cachedCodebooks = data.codebooks || [];
+      renderCodebooksTable();
+      const badge = document.getElementById('nav-codebooks-badge');
+      if (badge) {
+        badge.textContent = cachedCodebooks.length;
+        badge.style.display = cachedCodebooks.length > 0 ? 'inline-block' : 'none';
+      }
+    } catch (e) {
+      console.error("Error loading codebooks:", e);
+    }
+  }
+
+  function filterCodebooks(type) {
+    codebooksFilter = type;
+    document.querySelectorAll('#codebooks-filter-pills .filter-pill').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.filter === type);
+    });
+    loadCodebooks();
+  }
+
+  function renderCodebooksTable() {
+    const q = (document.getElementById('codebooks-search')?.value || '').toLowerCase().trim();
+    const tbody = document.getElementById('codebooks-table-body');
+    if (!tbody) return;
+
+    let filtered = cachedCodebooks.filter(cb => {
+      if (codebooksFilter === 'registered' && cb.user_type !== 'registered') return false;
+      if (codebooksFilter === 'guest' && cb.user_type !== 'guest') return false;
+      if (q) {
+        const matchInst = (cb.institution_name || '').toLowerCase().includes(q);
+        const matchTeam = (cb.team_name || '').toLowerCase().includes(q);
+        const matchUser = (cb.user_name || '').toLowerCase().includes(q);
+        const matchEmail = (cb.user_email || '').toLowerCase().includes(q);
+        const matchTitle = (cb.book_title || '').toLowerCase().includes(q);
+        if (!matchInst && !matchTeam && !matchUser && !matchEmail && !matchTitle) return false;
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 28px;">No codebooks found. When users or guests build a PDF, snapshots appear here.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(cb => {
+      const instDisplay = cb.institution_name || '<span style="color: var(--text-dim); font-style: italic;">No institution</span>';
+      const teamDisplay = cb.team_name ? `<span style="font-weight: 600; color: #0071E3;">${escapeHtml(cb.team_name)}</span>` : '<span style="color: var(--text-dim); font-style: italic;">Unnamed Team</span>';
+      const userBadge = cb.user_type === 'registered'
+        ? `<span class="badge-pill-inline" style="background: rgba(0, 113, 227, 0.08); color: #0071E3; font-weight: 600;">Registered</span>`
+        : `<span class="badge-pill-inline" style="background: rgba(245, 158, 11, 0.1); color: #D97706; font-weight: 600;">Guest</span>`;
+
+      return `
+        <tr>
+          <td>
+            <div style="font-weight: 600; font-size: 13px; color: var(--text-main);">${instDisplay}</div>
+            <div style="font-size: 11px; color: var(--text-dim);">${escapeHtml(cb.book_title || 'Contest Codebook')}</div>
+          </td>
+          <td>
+            <div>${teamDisplay}</div>
+          </td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-weight: 550; font-size: 12.5px;">${escapeHtml(cb.user_name || 'Guest')}</span>
+              ${userBadge}
+            </div>
+            ${cb.user_email ? `<div style="font-size: 11.5px; color: var(--text-dim); font-family: var(--font-mono);">${escapeHtml(cb.user_email)}</div>` : ''}
+          </td>
+          <td style="font-family: var(--font-mono); font-size: 12.5px;">
+            ${cb.page_count ? `<strong>${cb.page_count}</strong> pgs` : '<span style="color: var(--text-dim);">-</span>'}
+          </td>
+          <td>
+            <div style="font-size: 12.5px; font-weight: 500;">${cb.created_at_iso || formatDate(cb.created_at)}</div>
+            <div style="font-size: 11px; color: var(--text-dim);">${formatTime(cb.created_at)}</div>
+          </td>
+          <td style="text-align: right;">
+            <div style="display: inline-flex; gap: 6px;">
+              <button class="btn-table-action" onclick="openCodebookInspector('${cb.id}')">
+                Inspect
+              </button>
+              <a href="/api/admin/codebooks/${cb.id}/export-pdf" class="btn-table-action" style="text-decoration: none; display: inline-flex; align-items: center;" title="Download PDF">
+                PDF
+              </a>
+              <button class="btn-table-danger" onclick="deleteCodebookSnapshot('${cb.id}')" title="Delete Snapshot">
+                Delete
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  async function openCodebookInspector(snapshotId) {
+    const modal = document.getElementById('codebook-inspector-modal');
+    const body = document.getElementById('inspector-modal-body');
+    const titleEl = document.getElementById('inspector-modal-title');
+    const subEl = document.getElementById('inspector-modal-sub');
+    const metaEl = document.getElementById('inspector-meta-info');
+    const pdfBtn = document.getElementById('inspector-pdf-download-btn');
+
+    if (!modal || !body) return;
+
+    body.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-dim);">Loading codebook snapshot...</div>';
+    modal.classList.add('active');
+
+    try {
+      const res = await fetch(`/api/admin/codebooks/${snapshotId}`);
+      const data = await res.json();
+      if (!data.ok || !data.codebook) {
+        body.innerHTML = '<div style="padding: 24px; color: #EF4444;">Failed to load codebook snapshot details.</div>';
+        return;
+      }
+
+      const cb = data.codebook;
+      const content = cb.content || {};
+      const settings = content.settings || {};
+      const topics = content.topics || [];
+
+      titleEl.textContent = `${cb.institution_name || 'Codebook'} — ${cb.team_name || 'Team'}`;
+      subEl.textContent = `Saved on ${cb.created_at_iso} • ${cb.user_type === 'registered' ? 'Registered User (' + (cb.user_email || cb.user_name) + ')' : 'Guest Session'}`;
+      metaEl.textContent = `Snapshot ID: ${cb.id} • ${cb.page_count} Pages • Font: ${settings.code_font || 'JetBrains Mono'} • Theme: ${settings.code_theme || 'nord'}`;
+      pdfBtn.href = `/api/admin/codebooks/${cb.id}/export-pdf`;
+
+      let topicsHtml = '';
+      if (topics.length === 0) {
+        topicsHtml = '<div style="padding: 20px; color: var(--text-dim);">No topics or snippets found in this codebook.</div>';
+      } else {
+        topicsHtml = topics.map(t => {
+          const snippets = t.snippets || [];
+          const snippetsHtml = snippets.map(s => `
+            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-weight: 700; font-size: 13px; color: var(--text-main);">${escapeHtml(s.title || 'Snippet')}</span>
+                <span style="font-size: 10.5px; font-family: var(--font-mono); color: var(--text-dim); background: #FFFFFF; padding: 2px 6px; border-radius: 4px; border: 1px solid #E2E8F0;">${escapeHtml(s.complexity || s.language || 'cpp')}</span>
+              </div>
+              ${s.subtitle ? `<div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 6px;">${escapeHtml(s.subtitle)}</div>` : ''}
+              ${s.notes ? `<div style="font-size: 11.5px; color: #475569; font-style: italic; margin-bottom: 8px;">${escapeHtml(s.notes)}</div>` : ''}
+              ${s.code ? `<pre style="background: #0F172A; color: #F8FAFC; padding: 10px; border-radius: 6px; font-family: var(--font-mono); font-size: 11.5px; overflow-x: auto; max-height: 220px; margin: 0;"><code>${escapeHtml(s.code)}</code></pre>` : ''}
+            </div>
+          `).join('');
+
+          return `
+            <div style="margin-bottom: 20px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; border-bottom: 1.5px solid ${t.color || '#0071E3'}; padding-bottom: 4px;">
+                <span style="width: 10px; height: 10px; border-radius: 50%; background: ${t.color || '#0071E3'};"></span>
+                <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: var(--text-main);">${escapeHtml(t.name || 'Topic')}</h4>
+                <span style="font-size: 11px; color: var(--text-dim);">(${snippets.length} snippets)</span>
+              </div>
+              ${snippetsHtml || '<div style="font-size: 12px; color: var(--text-dim); padding: 8px;">No snippets in this topic.</div>'}
+            </div>
+          `;
+        }).join('');
+      }
+
+      body.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; background: #F1F5F9; padding: 12px; border-radius: 8px; margin-bottom: 18px; font-size: 12px;">
+          <div><strong style="color: var(--text-dim);">Book Title:</strong> ${escapeHtml(settings.book_title || '-')}</div>
+          <div><strong style="color: var(--text-dim);">Institution:</strong> ${escapeHtml(settings.institution_name || '-')}</div>
+          <div><strong style="color: var(--text-dim);">Team Name:</strong> ${escapeHtml(settings.team_name || '-')}</div>
+          <div><strong style="color: var(--text-dim);">Code Font:</strong> ${escapeHtml(settings.code_font || 'JetBrains Mono')}</div>
+          <div><strong style="color: var(--text-dim);">Code Theme:</strong> ${escapeHtml(settings.code_theme || 'nord')}</div>
+          <div><strong style="color: var(--text-dim);">Page Size:</strong> ${escapeHtml(settings.page_size || 'A4')}</div>
+        </div>
+        ${topicsHtml}
+      `;
+    } catch (e) {
+      body.innerHTML = `<div style="padding: 24px; color: #EF4444;">Error inspecting codebook: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  function closeCodebookInspector() {
+    const modal = document.getElementById('codebook-inspector-modal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  async function deleteCodebookSnapshot(snapshotId) {
+    if (!confirm('Are you sure you want to delete this codebook snapshot? This cannot be undone.')) return;
+    try {
+      const res = await fetch(`/api/admin/codebooks/${snapshotId}/delete`, { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Codebook snapshot deleted');
+        await loadCodebooks();
+        await loadStats();
+      } else {
+        alert(data.error || 'Failed to delete snapshot');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function inspectUserCodebook(userId, userName) {
+    switchTab('tab-codebooks');
+    const searchInput = document.getElementById('codebooks-search');
+    if (searchInput) {
+      searchInput.value = userName || userId;
+    }
+    await loadCodebooks();
+  }
+
   function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -2849,6 +3146,7 @@
     loadStats();
     loadInstitutions();
     loadReviews();
+    loadCodebooks();
     loadGistSyncStatus();
   });
 </script>
