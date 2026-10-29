@@ -103,7 +103,7 @@ def authenticate_user(conn, email: str, password: str) -> dict | None:
 
 def get_user_by_id(conn, user_id: str) -> dict | None:
     """Fetch user profile by user_id."""
-    if not user_id or user_id == "guest":
+    if not user_id or user_id == "guest" or user_id.startswith("guest_"):
         return None
     row = conn.execute("SELECT id, email, name, avatar_color, avatar_url, provider, role, created_at FROM users WHERE id = ?", (user_id,)).fetchone()
     if not row:
@@ -189,7 +189,7 @@ def init_user_starter_pack(conn, user_id: str, default_topics=None, default_snip
     conn.commit()
 
 
-def get_or_create_oauth_user(conn, provider: str, provider_id: str, email: str, name: str = "", avatar_url: str = "") -> dict:
+def get_or_create_oauth_user(conn, provider: str, provider_id: str, email: str, name: str = "", avatar_url: str = "", guest_id: str = "guest") -> dict:
     """Find an existing user by OAuth provider ID or email, or create a new user profile."""
     clean_email = (email or "").strip().lower()
     clean_provider_id = str(provider_id or "").strip()
@@ -256,7 +256,7 @@ def get_or_create_oauth_user(conn, provider: str, provider_id: str, email: str, 
     conn.commit()
 
     # Migrate in-progress guest topics/snippets/settings to new account, or seed starter pack
-    migrate_guest_data_to_user(conn, "guest", user_id)
+    migrate_guest_data_to_user(conn, guest_id or "guest", user_id)
 
     return {
         "id": user_id,
@@ -302,7 +302,12 @@ def migrate_guest_data_to_user(conn, guest_id: str, user_id: str):
     topic_id_map = {}
     for t in guest_topics:
         old_id = t["id"]
-        clean_tid = old_id.replace("guest_", "")
+        if old_id.startswith(f"{guest_id}_"):
+            clean_tid = old_id[len(guest_id) + 1:]
+        elif old_id.startswith("guest_"):
+            clean_tid = old_id[6:]
+        else:
+            clean_tid = old_id
         new_tid = f"{user_id}_{clean_tid}"
         topic_id_map[old_id] = new_tid
 

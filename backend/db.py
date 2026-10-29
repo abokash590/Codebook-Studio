@@ -521,12 +521,16 @@ def _migrate(conn):
     try:
         conn.execute("DELETE FROM institutions WHERE status = 'pending' AND (length(name) < 6 OR name NOT LIKE '% %')")
         conn.execute("DELETE FROM institution_logs WHERE length(institution_name) < 4")
+        # Reset legacy global 'guest' row to clean empty defaults so no stale server data leaks
+        conn.execute("UPDATE settings SET value = '' WHERE user_id = 'guest' AND key IN ('institution_name', 'team_name')")
+        conn.execute("UPDATE settings SET value = 'nord' WHERE user_id = 'guest' AND key = 'code_theme'")
     except Exception:
         pass
     conn.commit()
 
 
 TRASH_RETENTION_SECONDS = 30 * 24 * 60 * 60  # 30 days, see P1.5
+GUEST_RETENTION_SECONDS = 30 * 24 * 60 * 60  # 30 days
 
 
 def purge_expired_trash(conn):
@@ -538,11 +542,41 @@ def purge_expired_trash(conn):
     conn.commit()
 
 
+def purge_expired_guest_workspaces(conn):
+    """Prunes abandoned guest workspace drafts older than 30 days to keep the database lightweight.
+    Important: Leaves all university analytics, institution_logs, site_visits, and codebook_snapshots completely intact."""
+    cutoff = int(time.time()) - GUEST_RETENTION_SECONDS
+    try:
+        active_guests = {r[0] for r in conn.execute(
+            "SELECT DISTINCT user_id FROM site_visits WHERE user_id LIKE 'guest_%' AND created_at >= ?", (cutoff,)
+        ).fetchall()}
+
+        guest_ids = [r[0] for r in conn.execute(
+            "SELECT DISTINCT user_id FROM topics WHERE user_id LIKE 'guest_%'"
+        ).fetchall() if r[0] not in active_guests]
+
+        output_dir = Path(__file__).resolve().parent.parent / "output"
+        for gid in guest_ids:
+            conn.execute("DELETE FROM snippets WHERE user_id = ?", (gid,))
+            conn.execute("DELETE FROM topics WHERE user_id = ?", (gid,))
+            conn.execute("DELETE FROM settings WHERE user_id = ?", (gid,))
+            try:
+                guest_pdf = output_dir / f"codebook_{gid}.pdf"
+                if guest_pdf.exists():
+                    guest_pdf.unlink()
+            except Exception:
+                pass
+        conn.commit()
+    except Exception:
+        pass
+
+
 def init_db():
     conn = get_db()
     conn.executescript(SCHEMA)
     _migrate(conn)
     purge_expired_trash(conn)
+    purge_expired_guest_workspaces(conn)
 
     # Ensure super admin emails have role='admin'
     admin_emails = (

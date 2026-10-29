@@ -7,6 +7,7 @@ import os
 import re
 import threading
 import time
+import uuid
 from functools import wraps
 from pathlib import Path
 
@@ -117,18 +118,32 @@ if not _restored and os.environ.get("GITHUB_SYNC_TOKEN"):
 
 @app.after_request
 def _trigger_gist_sync_on_write(response):
-    """Automatically debounce-sync database to GitHub Gist whenever state is mutated."""
+    """Automatically debounce-sync database to GitHub Gist whenever state is mutated,
+    and persist the session-isolated guest cookie."""
     try:
         if request.method in ("POST", "PUT", "DELETE", "PATCH") and response.status_code < 400:
             if not request.path.startswith("/api/admin/gist-sync"):
                 schedule_gist_sync(delay_seconds=4.0)
     except Exception:
         pass
+    try:
+        gid = session.get("guest_id")
+        if gid and request.cookies.get("cb_gid") != gid:
+            response.set_cookie("cb_gid", gid, max_age=365 * 24 * 3600, samesite="Lax", httponly=True)
+    except Exception:
+        pass
     return response
 
 
+def is_guest_user(uid: str) -> bool:
+    """Returns True if the given user ID is an unauthenticated guest session."""
+    if not uid:
+        return True
+    return uid == "guest" or uid.startswith("guest_")
+
+
 def get_active_user_id() -> str:
-    """Return currently authenticated user ID, or 'guest' for unauthenticated users.
+    """Return currently authenticated user ID, or an isolated session guest ID for unauthenticated users.
     Supports session cookie with automatic fallback & rehydration via Bearer token."""
     uid = session.get("user_id")
     if uid:
@@ -141,7 +156,19 @@ def get_active_user_id() -> str:
             session.permanent = True
             session["user_id"] = verified_uid
             return verified_uid
-    return "guest"
+
+    # Unauthenticated visitor: isolated guest ID
+    guest_id = session.get("guest_id")
+    if not guest_id:
+        cookie_gid = request.cookies.get("cb_gid", "").strip()
+        if cookie_gid and cookie_gid.startswith("guest_") and len(cookie_gid) <= 32:
+            guest_id = cookie_gid
+        else:
+            guest_id = f"guest_{uuid.uuid4().hex[:12]}"
+        session["guest_id"] = guest_id
+        session.permanent = True
+
+    return guest_id
 
 
 def row_to_dict(row):
@@ -204,7 +231,7 @@ def is_developer_or_admin() -> bool:
 
         # 3. Authenticated Admin account
         uid = session.get("user_id")
-        if uid and uid != "guest":
+        if uid and not is_guest_user(uid):
             conn = get_db()
             row = conn.execute("SELECT role, email FROM users WHERE id = ?", (uid,)).fetchone()
             conn.close()
@@ -251,7 +278,7 @@ def log_site_visit(path: str = "/"):
             visitor_id = hashlib.md5(f"{ip}_{ua}".encode("utf-8")).hexdigest()[:18]
 
         device_type = "mobile" if any(m in ua for m in ("mobi", "android", "iphone", "ipad", "ipod", "windows phone")) else "desktop"
-        uid = session.get("user_id") or "guest"
+        uid = get_active_user_id()
         now = int(time.time())
 
         conn = get_db()
@@ -283,6 +310,9 @@ def index():
         import uuid
         vid = f"v_{uuid.uuid4().hex[:12]}"
         resp.set_cookie("cb_vid", vid, max_age=365 * 24 * 3600, samesite="Lax", httponly=True)
+    active_uid = get_active_user_id()
+    if is_guest_user(active_uid) and not request.cookies.get("cb_gid"):
+        resp.set_cookie("cb_gid", active_uid, max_age=365 * 24 * 3600, samesite="Lax", httponly=True)
     if request.args.get("dev_mode") == "1":
         resp.set_cookie("cb_dev_mode", "1", max_age=365 * 24 * 3600, samesite="Lax", httponly=False)
     elif request.args.get("dev_mode") == "0":
@@ -323,7 +353,7 @@ def api_institution_short_names():
 @app.route("/api/auth/me")
 def api_auth_me():
     uid = get_active_user_id()
-    if uid == "guest":
+    if is_guest_user(uid):
         return jsonify({"is_logged_in": False, "user": None})
     conn = get_db()
     user = get_user_by_id(conn, uid)
@@ -364,7 +394,8 @@ def api_auth_register():
         user = create_user(conn, email, password, name)
         # Migrate in-progress guest work to the new user account if available,
         # otherwise seed standard starter pack
-        migrate_guest_data_to_user(conn, "guest", user["id"])
+        guest_uid = session.get("guest_id") or request.cookies.get("cb_gid") or "guest"
+        migrate_guest_data_to_user(conn, guest_uid, user["id"])
         session.permanent = True
         session["user_id"] = user["id"]
         token = generate_auth_token(user["id"])
@@ -545,13 +576,15 @@ def api_auth_github_callback():
                     email = emails_list[0].get("email")
 
         conn = get_db()
+        current_gid = session.get("guest_id") or request.cookies.get("cb_gid") or "guest"
         user = get_or_create_oauth_user(
             conn,
             provider="github",
             provider_id=str(gh_user.get("id", "")),
             email=email or f"{gh_user.get('login')}@github.user",
             name=gh_user.get("name") or gh_user.get("login") or "GitHub User",
-            avatar_url=gh_user.get("avatar_url", "")
+            avatar_url=gh_user.get("avatar_url", ""),
+            guest_id=current_gid
         )
         conn.close()
         session.permanent = True
@@ -627,13 +660,15 @@ def api_auth_google_callback():
             userinfo = json.loads(resp.read().decode("utf-8"))
 
         conn = get_db()
+        current_gid = session.get("guest_id") or request.cookies.get("cb_gid") or "guest"
         user = get_or_create_oauth_user(
             conn,
             provider="google",
             provider_id=str(userinfo.get("sub", "")),
             email=userinfo.get("email", ""),
             name=userinfo.get("name", "Google User"),
-            avatar_url=userinfo.get("picture", "")
+            avatar_url=userinfo.get("picture", ""),
+            guest_id=current_gid
         )
         conn.close()
         session.permanent = True
@@ -652,11 +687,10 @@ def api_auth_google_callback():
 def api_state():
     uid = get_active_user_id()
     conn = get_db()
-    user_info = get_user_by_id(conn, uid) if uid != "guest" else None
+    user_info = get_user_by_id(conn, uid) if not is_guest_user(uid) else None
 
-    # Check if this user has topics or is missing sample notes
-    if uid != "guest":
-        init_user_starter_pack(conn, uid)
+    # Check if this user (registered user or fresh isolated guest session) has topics or is missing starter pack
+    init_user_starter_pack(conn, uid)
 
     topics = [row_to_dict(r) for r in conn.execute(
         "SELECT * FROM topics WHERE user_id=? AND deleted_at IS NULL ORDER BY sort_order", (uid,)
@@ -854,7 +888,7 @@ def api_topic_create():
     raw_slug = re.sub(r'[^a-zA-Z0-9_\-]+', '', raw_name.lower().replace(" ", "-"))
     if not raw_slug:
         raw_slug = f"topic-{int(time.time())}"
-    slug = f"{uid}_{raw_slug}" if uid != "guest" else raw_slug
+    slug = f"{uid}_{raw_slug}"
 
     conn = get_db()
     base_slug = slug
@@ -1097,7 +1131,7 @@ def api_settings_update():
                             team_val = t_row["value"].strip()
 
                     u_name = "Guest Visitor"
-                    if uid != "guest":
+                    if not is_guest_user(uid):
                         u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
                         if u_row and u_row["name"]:
                             u_name = u_row["name"]
@@ -1123,7 +1157,7 @@ def api_settings_update():
                             team_val = t_row["value"].strip()
 
                     u_name = "Guest Visitor"
-                    if uid != "guest":
+                    if not is_guest_user(uid):
                         u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
                         if u_row and u_row["name"]:
                             u_name = u_row["name"]
@@ -1154,7 +1188,7 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         uid = get_active_user_id()
-        if uid == "guest":
+        if is_guest_user(uid):
             if request.path.startswith("/api/"):
                 return jsonify({"ok": False, "error": "Authentication required."}), 401
             return redirect("/?login=1&redirect=/admin")
@@ -1187,7 +1221,7 @@ def api_track_export():
     user_email = ""
 
     conn = get_db()
-    if uid != "guest":
+    if not is_guest_user(uid):
         u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
         if u_row:
             user_name = u_row["name"]
@@ -1264,13 +1298,13 @@ def api_submit_review():
     user_email = ""
 
     conn = get_db()
-    if uid != "guest":
+    if not is_guest_user(uid):
         u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
         if u_row:
             user_name = u_row["name"] or "Contestant"
             user_email = u_row["email"] or ""
 
-    if uid == "guest" and data.get("user_name"):
+    if is_guest_user(uid) and data.get("user_name"):
         user_name = str(data.get("user_name")).strip()[:60]
 
     inst_name = str(data.get("institution_name", "")).strip()
@@ -1326,7 +1360,7 @@ def api_get_reviews():
 def api_get_review_status():
     """Check if the currently signed-in user has already submitted a review."""
     uid = get_active_user_id()
-    if uid == "guest":
+    if is_guest_user(uid):
         return jsonify({"has_reviewed": False})
     conn = get_db()
     row = conn.execute("SELECT COUNT(*) FROM reviews WHERE user_id = ?", (uid,)).fetchone()
@@ -1372,7 +1406,7 @@ def save_codebook_snapshot(conn, user_id: str, user_name: str = "", user_email: 
     snapshot_id = f"snap_{uuid.uuid4().hex[:12]}"
     now_epoch = int(time.time())
     now_iso = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    user_type = "registered" if (user_id != "guest" and not user_id.startswith("guest_")) else "guest"
+    user_type = "guest" if is_guest_user(user_id) else "registered"
     display_user_name = user_name or ("Guest (" + (final_team or "Anonymous") + ")")
 
     conn.execute(
@@ -1399,7 +1433,7 @@ def api_save_snapshot():
     conn = get_db()
     user_name = "Guest"
     user_email = ""
-    if uid != "guest":
+    if not is_guest_user(uid):
         u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
         if u_row:
             user_name = u_row["name"]
@@ -1437,7 +1471,7 @@ def api_build():
         user_email = ""
 
         conn = get_db()
-        if uid != "guest":
+        if not is_guest_user(uid):
             u_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (uid,)).fetchone()
             if u_row:
                 user_name = u_row["name"]
