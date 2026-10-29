@@ -1205,7 +1205,7 @@
             <div class="kpi-value" id="kpi-teams-count">-</div>
             <div class="kpi-subtext">
               <span class="badge-pill-inline" id="kpi-total-users-sub">0 Users</span>
-              <span>Active in Studio</span>
+              <span id="kpi-snapshots-sub">Active in Studio</span>
             </div>
           </div>
 
@@ -1236,6 +1236,7 @@
             <div class="kpi-subtext">
               <span class="badge-pill-inline" id="kpi-code-count">0 Code</span>
               <span id="kpi-notes-count">0 Notes</span>
+              <span id="kpi-topics-count" style="margin-left: 4px; font-weight: 500; color: var(--text-muted);">· 0 Topics</span>
             </div>
           </div>
         </div>
@@ -1429,11 +1430,11 @@
               <input type="text" id="users-search" class="search-input" placeholder="Search by name, email, university or team...">
             </div>
             <div class="filter-pills">
-              <button class="filter-pill active" data-filter="all">All</button>
-              <button class="filter-pill" data-filter="admin">Admins</button>
-              <button class="filter-pill" data-filter="google">Google</button>
-              <button class="filter-pill" data-filter="github">GitHub</button>
-              <button class="filter-pill" data-filter="local">Email</button>
+              <button class="filter-pill active" data-filter="all">All (<span id="user-pill-all">0</span>)</button>
+              <button class="filter-pill" data-filter="admin">Admins (<span id="user-pill-admin">0</span>)</button>
+              <button class="filter-pill" data-filter="google">Google (<span id="user-pill-google">0</span>)</button>
+              <button class="filter-pill" data-filter="github">GitHub (<span id="user-pill-github">0</span>)</button>
+              <button class="filter-pill" data-filter="local">Email (<span id="user-pill-local">0</span>)</button>
             </div>
           </div>
 
@@ -1722,7 +1723,7 @@
               </div>
               <div class="tool-meta">
                 <h3>Download Database Snapshot</h3>
-                <p>Creates an instant binary copy of <code style="font-family: var(--font-mono); color: #0071E3;">codebook.db</code> for offsite backup, analytics, or migration.</p>
+                <p>Creates an instant binary copy of <code style="font-family: var(--font-mono); color: #0071E3;">codebook.db</code> for offsite backup, analytics, or migration. <span id="maint-db-size" style="font-size: 11.5px; font-weight: 600; color: #0071E3; margin-left: 4px;"></span></p>
               </div>
             </div>
             <a href="/api/admin/maintenance/backup-db" class="tool-btn tool-btn-primary">
@@ -1738,7 +1739,7 @@
               </div>
               <div class="tool-meta">
                 <h3>Purge Build Artifacts & Cache</h3>
-                <p>Cleans temporary HTML and PDF files in <code style="font-family: var(--font-mono); color: #D97706;">output/</code> without impacting active databases or templates.</p>
+                <p>Cleans temporary HTML and PDF files in <code style="font-family: var(--font-mono); color: #D97706;">output/</code> without impacting active databases or templates. <span id="maint-output-size" style="font-size: 11.5px; font-weight: 600; color: #D97706; margin-left: 4px;"></span></p>
               </div>
             </div>
             <button class="tool-btn tool-btn-secondary" id="btn-clear-cache">
@@ -1943,6 +1944,11 @@
 
       document.getElementById('kpi-teams-count').textContent = data.teams.total_teams;
       document.getElementById('kpi-total-users-sub').textContent = `${data.users.total} Users`;
+      if (data.users.new_today > 0) {
+        document.getElementById('kpi-total-users-sub').textContent = `${data.users.total} Users (+${data.users.new_today} today)`;
+      }
+      const snapEl = document.getElementById('kpi-snapshots-sub');
+      if (snapEl) snapEl.textContent = `Active in Studio (${(data.codebooks && data.codebooks.total) ? data.codebooks.total : 0} Snapshots)`;
 
       document.getElementById('kpi-total-builds').textContent = data.builds.total;
       document.getElementById('kpi-success-rate').textContent = `${data.builds.success_rate}% Success`;
@@ -1951,6 +1957,30 @@
       document.getElementById('kpi-total-snippets').textContent = data.content.total_snippets;
       document.getElementById('kpi-code-count').textContent = `${data.content.total_codes} Code`;
       document.getElementById('kpi-notes-count').textContent = `${data.content.total_notes} Notes`;
+      const topicsEl = document.getElementById('kpi-topics-count');
+      if (topicsEl) topicsEl.textContent = `· ${data.content.total_topics || 0} Topics`;
+
+      // Users filter pills counts
+      if (data.users) {
+        const uAll = document.getElementById('user-pill-all');
+        const uAdmin = document.getElementById('user-pill-admin');
+        const uGoogle = document.getElementById('user-pill-google');
+        const uGithub = document.getElementById('user-pill-github');
+        const uLocal = document.getElementById('user-pill-local');
+        if (uAll) uAll.textContent = data.users.total || 0;
+        if (uAdmin) uAdmin.textContent = data.users.admins || 0;
+        if (uGoogle && data.users.providers) uGoogle.textContent = data.users.providers.google || 0;
+        if (uGithub && data.users.providers) uGithub.textContent = data.users.providers.github || 0;
+        if (uLocal && data.users.providers) uLocal.textContent = data.users.providers.local || 0;
+      }
+
+      // Storage indicators in Maintenance
+      if (data.storage) {
+        const dbSizeEl = document.getElementById('maint-db-size');
+        const outSizeEl = document.getElementById('maint-output-size');
+        if (dbSizeEl && data.storage.db_formatted) dbSizeEl.textContent = `(Size: ${data.storage.db_formatted})`;
+        if (outSizeEl && data.storage.output_formatted) outSizeEl.textContent = `(Size: ${data.storage.output_formatted})`;
+      }
 
       // Pending banner in overview & nav badge
       const pendingBanner = document.getElementById('overview-pending-banner');
@@ -2040,22 +2070,25 @@
 
     const maxVal = Math.max(...days.map(d => Math.max(d.visits, d.unique)), 1);
     let weekTotal = 0;
+    let weekBuilds = 0;
     let todayVisits = 0;
     let todayUnique = 0;
 
     container.innerHTML = days.map(d => {
       weekTotal += (d.visits || 0);
+      weekBuilds += (d.builds || 0);
       if (d.is_today) {
         todayVisits = d.visits || 0;
         todayUnique = d.unique || 0;
       }
       const visitsHeight = Math.max(Math.round(((d.visits || 0) / maxVal) * 115), (d.visits > 0 ? 8 : 3));
       const uniqueHeight = Math.max(Math.round(((d.unique || 0) / maxVal) * 115), (d.unique > 0 ? 8 : 3));
+      const buildInfo = (d.builds && d.builds > 0) ? ` · <strong>${d.builds}</strong> builds` : '';
 
       return `
         <div class="traffic-bar-col">
           <div class="traffic-bar-tooltip">
-            ${escapeHtml(d.date)}: <strong>${d.visits}</strong> visits (${d.unique} unique)
+            ${escapeHtml(d.date)}: <strong>${d.visits}</strong> visits (${d.unique} unique)${buildInfo}
           </div>
           <div style="font-size: 11px; font-weight: 700; color: ${d.is_today ? '#0071E3' : 'var(--text-muted)'}; margin-bottom: 6px; font-family: var(--font-mono);">
             ${d.visits}
@@ -2079,7 +2112,7 @@
     const weekTotalEl = document.getElementById('traffic-week-total');
     if (todaySummaryEl) todaySummaryEl.textContent = `${todayVisits} ${todayVisits === 1 ? 'visit' : 'visits'}`;
     if (todayUniqueEl) todayUniqueEl.textContent = `${todayUnique} unique`;
-    if (weekTotalEl) weekTotalEl.textContent = `${weekTotal} ${weekTotal === 1 ? 'visit' : 'visits'}`;
+    if (weekTotalEl) weekTotalEl.textContent = `${weekTotal} ${weekTotal === 1 ? 'visit' : 'visits'}${weekBuilds ? ` (${weekBuilds} builds)` : ''}`;
   }
 
   // Load Institutions Directory

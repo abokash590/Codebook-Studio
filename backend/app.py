@@ -135,6 +135,25 @@ def _trigger_gist_sync_on_write(response):
     return response
 
 
+@app.teardown_appcontext
+def _teardown_db(exception=None):
+    """Automatically close SQLite connection when request context ends."""
+    try:
+        from flask import g
+        db = getattr(g, "_database", None)
+        if db is not None:
+            if hasattr(db, "_force_close"):
+                db._force_close()
+            else:
+                try:
+                    db.close()
+                except Exception:
+                    pass
+            g._database = None
+    except Exception:
+        pass
+
+
 def is_guest_user(uid: str) -> bool:
     """Returns True if the given user ID is an unauthenticated guest session."""
     if not uid:
@@ -695,12 +714,20 @@ def api_state():
     topics = [row_to_dict(r) for r in conn.execute(
         "SELECT * FROM topics WHERE user_id=? AND deleted_at IS NULL ORDER BY sort_order", (uid,)
     )]
+
+    # Optimized single-query snippet hydration (resolves N+1 query pattern)
+    all_snippets = conn.execute(
+        "SELECT * FROM snippets WHERE user_id=? AND deleted_at IS NULL ORDER BY sort_order", (uid,)
+    ).fetchall()
+    snippets_by_topic = {}
+    for s in all_snippets:
+        tid = s["topic_id"]
+        if tid not in snippets_by_topic:
+            snippets_by_topic[tid] = []
+        snippets_by_topic[tid].append(snippet_row_to_dict(s))
+
     for t in topics:
-        t["snippets"] = [
-            snippet_row_to_dict(r) for r in conn.execute(
-                "SELECT * FROM snippets WHERE user_id=? AND topic_id=? AND deleted_at IS NULL ORDER BY sort_order", (uid, t["id"])
-            )
-        ]
+        t["snippets"] = snippets_by_topic.get(t["id"], [])
     from backend.db import DEFAULT_SETTINGS, DEFAULT_BOILERPLATE_CODE
     db_settings = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings WHERE user_id=?", (uid,))}
     settings = dict(DEFAULT_SETTINGS)
@@ -1685,24 +1712,47 @@ def api_admin_stats():
     desktop_visits = conn.execute("SELECT COUNT(*) FROM site_visits WHERE device_type = 'desktop'").fetchone()[0]
     mobile_visits = conn.execute("SELECT COUNT(*) FROM site_visits WHERE device_type = 'mobile'").fetchone()[0]
     total_device_visits = desktop_visits + mobile_visits
-    desktop_pct = round((desktop_visits / total_device_visits * 100)) if total_device_visits else 70
-    mobile_pct = 100 - desktop_pct if total_device_visits else 30
+    desktop_pct = round((desktop_visits / total_device_visits * 100)) if total_device_visits else 0
+    mobile_pct = (100 - desktop_pct) if total_device_visits else 0
 
-    # 7-Day Traffic Series for Bar Chart
+    # 7-Day Traffic & Conversion Series for Bar Chart (optimized to 2 indexed batch queries)
+    week_start = midnight - (6 * 86400)
+    visit_stats = {
+        r[0]: (r[1], r[2]) for r in conn.execute(
+            """SELECT (created_at - (created_at % 86400)) as day_bin,
+                      COUNT(*),
+                      COUNT(DISTINCT visitor_id)
+               FROM site_visits
+               WHERE created_at >= ?
+               GROUP BY day_bin""",
+            (week_start,)
+        ).fetchall()
+    }
+    build_stats = {
+        r[0]: r[1] for r in conn.execute(
+            """SELECT (created_at - (created_at % 86400)) as day_bin,
+                      COUNT(*)
+               FROM build_logs
+               WHERE created_at >= ?
+               GROUP BY day_bin""",
+            (week_start,)
+        ).fetchall()
+    }
+
     traffic_7_days = []
     for i in range(6, -1, -1):
         day_start = midnight - (i * 86400)
-        day_end = day_start + 86400
-        count = conn.execute("SELECT COUNT(*) FROM site_visits WHERE created_at >= ? AND created_at < ?", (day_start, day_end)).fetchone()[0]
-        unique_cnt = conn.execute("SELECT COUNT(DISTINCT visitor_id) FROM site_visits WHERE created_at >= ? AND created_at < ?", (day_start, day_end)).fetchone()[0]
+        v_count, u_count = visit_stats.get(day_start, (0, 0))
+        b_count = build_stats.get(day_start, 0)
         time_tuple = time.localtime(day_start)
         day_label = time.strftime("%a", time_tuple)
         date_label = time.strftime("%b %d", time_tuple)
         traffic_7_days.append({
             "day": day_label,
             "date": date_label,
-            "visits": count,
-            "unique": unique_cnt,
+            "visits": v_count,
+            "unique": u_count,
+            "builds": b_count,
             "is_today": i == 0
         })
 

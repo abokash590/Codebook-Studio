@@ -13,6 +13,7 @@ preview and the final PDF (WeasyPrint renders data-URL images natively).
 """
 
 import base64
+from functools import lru_cache
 import io
 
 import matplotlib
@@ -32,6 +33,7 @@ def _wrap(latex: str) -> str:
     return text
 
 
+@lru_cache(maxsize=512)
 def render_formula(latex: str, fontsize: int = FONT_SIZE, color: str = TEXT_COLOR):
     """Returns (ok, img_data_url_or_None, error_message_or_None)."""
     text = _wrap(latex)

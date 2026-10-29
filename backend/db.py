@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS build_logs (
     error_message TEXT DEFAULT '',
     created_at INTEGER NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_build_logs_created_at ON build_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_build_logs_user_id ON build_logs(user_id);
 
 CREATE TABLE IF NOT EXISTS institutions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,6 +48,7 @@ CREATE TABLE IF NOT EXISTS institutions (
     created_at INTEGER NOT NULL,
     last_used_at INTEGER NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_institutions_status_counts ON institutions(status, build_count DESC, workspace_count DESC);
 
 CREATE TABLE IF NOT EXISTS institution_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,6 +82,7 @@ CREATE TABLE IF NOT EXISTS topics (
     deleted_at INTEGER,
     PRIMARY KEY (id, user_id)
 );
+CREATE INDEX IF NOT EXISTS idx_topics_user_order ON topics(user_id, deleted_at, sort_order);
 
 CREATE TABLE IF NOT EXISTS snippets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,6 +101,8 @@ CREATE TABLE IF NOT EXISTS snippets (
     kind TEXT NOT NULL DEFAULT 'code',
     deleted_at INTEGER
 );
+CREATE INDEX IF NOT EXISTS idx_snippets_lookup ON snippets(user_id, topic_id, deleted_at, sort_order);
+CREATE INDEX IF NOT EXISTS idx_snippets_user_deleted ON snippets(user_id, deleted_at);
 
 CREATE TABLE IF NOT EXISTS settings (
     user_id TEXT NOT NULL DEFAULT 'guest',
@@ -380,8 +386,42 @@ DEFAULT_SETTINGS = {
 }
 
 
+class _RequestContextDb:
+    """Wraps sqlite3.Connection during an active Flask request.
+    Allows existing route code to call conn.close() safely as a no-op,
+    while guaranteeing the underlying connection is closed when the request ends."""
+    def __init__(self, conn):
+        self._conn = conn
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+    def close(self):
+        # In request context, closing is deferred to Flask teardown
+        pass
+
+    def _force_close(self):
+        try:
+            self._conn.close()
+        except Exception:
+            pass
+
+
 def get_db():
     DB_PATH.parent.mkdir(exist_ok=True)
+    try:
+        from flask import g, has_request_context
+        if has_request_context():
+            if "_database" not in g or g._database is None:
+                raw_conn = sqlite3.connect(DB_PATH, timeout=30.0)
+                raw_conn.row_factory = sqlite3.Row
+                raw_conn.execute("PRAGMA foreign_keys = ON")
+                raw_conn.execute("PRAGMA journal_mode = WAL")
+                g._database = _RequestContextDb(raw_conn)
+            return g._database
+    except Exception:
+        pass
+
     conn = sqlite3.connect(DB_PATH, timeout=30.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
@@ -516,6 +556,12 @@ def _migrate(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_team ON codebook_snapshots(institution_name, team_name)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_user ON codebook_snapshots(user_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_created ON codebook_snapshots(created_at)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_topics_user_order ON topics(user_id, deleted_at, sort_order)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_snippets_lookup ON snippets(user_id, topic_id, deleted_at, sort_order)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_snippets_user_deleted ON snippets(user_id, deleted_at)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_build_logs_created_at ON build_logs(created_at)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_build_logs_user_id ON build_logs(user_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_institutions_status_counts ON institutions(status, build_count DESC, workspace_count DESC)")
 
     # Clean up any historic accidental partial-typed pending institutions (e.g. 'my', 'dh')
     try:
